@@ -62,6 +62,7 @@ claudeProjects/
 10. Cite sources where possible
 11. **Backup CLAUDE.md as `claude_MMDDYYYY-N.md` before each commit**
 12. **Log terminal summaries to claudeLog.md**
+13. **Naming: camelCase for JS/TS, snake_case for Python**
 
 ---
 
