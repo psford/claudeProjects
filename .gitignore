@@ -1,0 +1,14 @@
+# Sensitive files - never commit
+tokens.md
+.env
+*.key
+*.pem
+credentials.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE folders
+.vscode/
+.idea/

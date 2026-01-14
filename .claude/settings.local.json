@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version:*)",
+      "Bash(gh:*)",
+      "Bash(winget:*)",
+      "Bash(git config:*)",
+      "Bash(findstr:*)",
+      "Bash(glab --version:*)",
+      "Bash(choco --version:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
