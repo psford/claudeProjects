@@ -13,6 +13,18 @@ def get_stock_info(ticker: str) -> dict:
     stock = yf.Ticker(ticker)
     info = stock.info
 
+    # Validate dividend yield - yfinance can return inconsistent values
+    # Expected format: decimal (0.004 = 0.4%), but sometimes returns 100x higher
+    raw_yield = info.get("dividendYield", "N/A")
+    if isinstance(raw_yield, (int, float)):
+        if raw_yield > 0.10:
+            # Value > 10% is likely inflated by 100x, correct it
+            dividend_yield = raw_yield / 100
+        else:
+            dividend_yield = raw_yield
+    else:
+        dividend_yield = "N/A"
+
     return {
         "name": info.get("longName", "N/A"),
         "sector": info.get("sector", "N/A"),
@@ -22,7 +34,7 @@ def get_stock_info(ticker: str) -> dict:
         "52_week_high": info.get("fiftyTwoWeekHigh", "N/A"),
         "52_week_low": info.get("fiftyTwoWeekLow", "N/A"),
         "pe_ratio": info.get("trailingPE", "N/A"),
-        "dividend_yield": info.get("dividendYield", "N/A"),
+        "dividend_yield": dividend_yield,
         "beta": info.get("beta", "N/A"),
     }
 
