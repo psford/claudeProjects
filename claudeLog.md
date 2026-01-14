@@ -36,3 +36,4 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Added guideline #13 (naming conventions) | Success |
 | - | Set git core.autocrlf to input | Success |
 | - | Created dependencies.md | Success |
+| - | Added guideline #14 (session commands) | Success |

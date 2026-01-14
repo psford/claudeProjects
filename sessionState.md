@@ -63,6 +63,7 @@ claudeProjects/
 11. **Backup CLAUDE.md as `claude_MMDDYYYY-N.md` before each commit**
 12. **Log terminal summaries to claudeLog.md**
 13. **Naming: camelCase for JS/TS, snake_case for Python**
+14. **Session commands: "night!" = save state, "hello!" = restore state**
 
 ---
 
@@ -120,7 +121,13 @@ print_stock_summary("AAPL")
 
 ## Quick Start for New Session
 
+**Say "hello!"** to restore context automatically.
+
+Or manually:
 1. Read `CLAUDE.md` for current guidelines
 2. Read `sessionState.md` (this file) for context
 3. Check `claudeLog.md` for recent actions
-4. Run `git log --oneline` to see commit history
+4. Read `dependencies.md` for installed packages
+5. Run `git log --oneline` to see commit history
+
+**Say "night!"** at end of session to save state.
