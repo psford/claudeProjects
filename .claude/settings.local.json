@@ -12,7 +12,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(pip:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(dir /b \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\")"
     ]
   }
 }
