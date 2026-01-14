@@ -34,3 +34,5 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 
 | - | Created sessionState.md | Success - session context saved |
 | - | Added guideline #13 (naming conventions) | Success |
+| - | Set git core.autocrlf to input | Success |
+| - | Created dependencies.md | Success |
