@@ -1,6 +1,6 @@
 # Session State - Last Updated 01/13/2026
 
-Use this file to restore context when starting a new session. Say "let's get started again" and Claude should read this file.
+Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
 ---
 
@@ -40,8 +40,9 @@ claudeProjects/
 ├── CLAUDE.md                # Guidelines and known issues (READ THIS FIRST)
 ├── claudeLog.md             # Terminal action log (summaries only)
 ├── sessionState.md          # This file
+├── dependencies.md          # Package and tool dependencies
 ├── rules.md                 # Additional rules (pre-existing)
-├── claude_01132026-*.md     # Versioned backups of CLAUDE.md
+├── claude_01132026-*.md     # Versioned backups of CLAUDE.md (7 total)
 └── stock_analysis/
     └── stock_analyzer.py    # yfinance stock analysis tool
 ```
@@ -102,6 +103,11 @@ print_stock_summary("AAPL")
 
 | Hash | Description |
 |------|-------------|
+| 54cde48 | Add session command guideline (#14) |
+| 00581a0 | Add dependencies.md |
+| 6778d6e | Update sessionState.md with guideline #13 |
+| 0c6fd34 | Add naming convention guideline |
+| c5ab836 | Add session state file for context restoration |
 | 8b97aee | Add terminal logging system |
 | 7feb79d | Fix dividend yield validation |
 | a6f414b | Add known issues section |
