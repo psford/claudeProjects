@@ -27,6 +27,7 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Added 5% daily move markers to charts | Success |
 | - | Integrated Finnhub news API for marker hover | Success |
 | - | Created .env for API key storage | Success |
+| - | Added news panel with thumbnails and links | Success |
 
 ---
 

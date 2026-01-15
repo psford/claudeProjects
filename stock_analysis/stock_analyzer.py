@@ -105,16 +105,18 @@ def get_news_for_date(ticker: str, target_date: datetime, lookback_days: int = 2
         return None
 
 
-def get_news_for_dates(ticker: str, dates: list) -> dict:
+def get_news_for_dates(ticker: str, dates: list, full_data: bool = False) -> dict:
     """
-    Batch fetch news headlines for multiple dates.
+    Batch fetch news for multiple dates.
 
     Args:
         ticker: Stock symbol
         dates: List of datetime objects
+        full_data: If True, return full news dict; if False, return just headline
 
     Returns:
-        Dict mapping date to headline (or None if no news)
+        Dict mapping date to news (headline string or full dict with
+        'headline', 'url', 'image', 'summary', 'source')
     """
     if not dates:
         return {}
@@ -144,7 +146,7 @@ def get_news_for_dates(ticker: str, dates: list) -> dict:
             to=end_date.strftime('%Y-%m-%d')
         )
 
-        # Build a lookup by date
+        # Build a lookup by date (store full news item)
         news_by_date = {}
         for item in all_news:
             news_ts = item.get('datetime', 0)
@@ -152,7 +154,7 @@ def get_news_for_dates(ticker: str, dates: list) -> dict:
                 news_date = datetime.fromtimestamp(news_ts).date()
                 if news_date not in news_by_date:
                     news_by_date[news_date] = []
-                news_by_date[news_date].append(item.get('headline', ''))
+                news_by_date[news_date].append(item)
 
         # For each target date, find news from that day or 1-2 days prior
         results = {}
@@ -161,19 +163,74 @@ def get_news_for_dates(ticker: str, dates: list) -> dict:
             target_d = target_dt.date()
 
             # Check target date, then day before, then 2 days before
-            headline = None
+            news_item = None
             for offset in range(3):
                 check_date = target_d - timedelta(days=offset)
                 if check_date in news_by_date and news_by_date[check_date]:
-                    headline = news_by_date[check_date][0]  # Most recent on that day
+                    news_item = news_by_date[check_date][0]  # Most recent on that day
                     break
 
-            results[target] = headline
+            if news_item:
+                if full_data:
+                    results[target] = {
+                        'headline': news_item.get('headline', ''),
+                        'url': news_item.get('url', ''),
+                        'image': news_item.get('image', ''),
+                        'summary': news_item.get('summary', ''),
+                        'source': news_item.get('source', ''),
+                    }
+                else:
+                    results[target] = news_item.get('headline', '')
+            else:
+                results[target] = None
 
         return results
 
     except Exception:
         return {d: None for d in dates}
+
+
+def get_significant_moves_with_news(ticker: str, period: str = "1y",
+                                     threshold: float = 0.05) -> list:
+    """
+    Get all significant daily moves with associated news.
+
+    Args:
+        ticker: Stock symbol
+        period: Time period to analyze
+        threshold: Minimum absolute return to consider significant (default 5%)
+
+    Returns:
+        List of dicts with 'date', 'return_pct', 'direction', and 'news' keys
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        return []
+
+    daily_returns = df["Close"].pct_change()
+    significant = (daily_returns >= threshold) | (daily_returns <= -threshold)
+    sig_dates = list(df.index[significant])
+
+    if not sig_dates:
+        return []
+
+    # Fetch news for all significant dates
+    news_data = get_news_for_dates(ticker, sig_dates, full_data=True)
+
+    # Build results
+    results = []
+    for date in sig_dates:
+        ret = daily_returns.loc[date]
+        results.append({
+            'date': date,
+            'return_pct': ret * 100,
+            'direction': 'up' if ret > 0 else 'down',
+            'news': news_data.get(date, None),
+        })
+
+    # Sort by date descending (most recent first)
+    results.sort(key=lambda x: x['date'], reverse=True)
+    return results
 
 
 def get_stock_info(ticker: str) -> dict:

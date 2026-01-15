@@ -20,6 +20,7 @@ from stock_analyzer import (
     create_plotly_candlestick,
     create_plotly_line,
     search_tickers,
+    get_significant_moves_with_news,
 )
 
 
@@ -221,6 +222,61 @@ elif ticker:
                         "Period Low",
                         f"${hist['Low'].min():.2f}"
                     )
+
+                # Significant Moves with News
+                st.markdown("---")
+                st.markdown("### Significant Moves (±5%)")
+                st.caption("Days with 5% or greater price change, with related news")
+
+                with st.spinner("Loading news for significant moves..."):
+                    moves = get_significant_moves_with_news(ticker, period=period)
+
+                if moves:
+                    for move in moves:
+                        date_str = move['date'].strftime('%Y-%m-%d')
+                        ret = move['return_pct']
+                        direction = move['direction']
+                        news = move['news']
+
+                        # Color based on direction
+                        color = "green" if direction == 'up' else "red"
+                        arrow = "↑" if direction == 'up' else "↓"
+                        sign = "+" if ret > 0 else ""
+
+                        with st.container():
+                            col_date, col_content = st.columns([1, 4])
+
+                            with col_date:
+                                st.markdown(f"**{date_str}**")
+                                st.markdown(f":{color}[{arrow} {sign}{ret:.1f}%]")
+
+                            with col_content:
+                                if news:
+                                    # Show thumbnail and headline
+                                    thumb_col, text_col = st.columns([1, 3])
+
+                                    with thumb_col:
+                                        if news.get('image'):
+                                            st.image(news['image'], width=120)
+
+                                    with text_col:
+                                        headline = news.get('headline', 'No headline')
+                                        url = news.get('url', '')
+                                        source = news.get('source', '')
+
+                                        if url:
+                                            st.markdown(f"**[{headline}]({url})**")
+                                        else:
+                                            st.markdown(f"**{headline}**")
+
+                                        if source:
+                                            st.caption(f"Source: {source}")
+                                else:
+                                    st.markdown("*No news found for this date*")
+
+                            st.markdown("---")
+                else:
+                    st.info("No significant moves (±5%) found in this period.")
 
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
