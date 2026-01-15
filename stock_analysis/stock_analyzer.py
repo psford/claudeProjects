@@ -396,6 +396,59 @@ def create_plotly_candlestick(ticker: str, period: str = "6mo",
                 else:
                     fig.add_trace(ma_trace)
 
+    # Add markers for significant daily moves (>= 5% change)
+    daily_returns = df["Close"].pct_change()
+    significant_up = daily_returns >= 0.05
+    significant_down = daily_returns <= -0.05
+
+    # Markers for +5% days (green circles above the high)
+    if significant_up.any():
+        up_dates = df.index[significant_up]
+        up_prices = df.loc[significant_up, "High"] * 1.02  # Slightly above high
+        up_returns = daily_returns[significant_up] * 100
+        up_trace = go.Scatter(
+            x=up_dates,
+            y=up_prices,
+            mode="markers",
+            name="+5% Move",
+            marker=dict(
+                symbol="circle",
+                size=12,
+                color="#4CAF50",
+                line=dict(color="white", width=1)
+            ),
+            hovertemplate="%{x}<br>Change: +%{customdata:.1f}%<extra></extra>",
+            customdata=up_returns
+        )
+        if show_volume:
+            fig.add_trace(up_trace, row=1, col=1)
+        else:
+            fig.add_trace(up_trace)
+
+    # Markers for -5% days (red circles below the low)
+    if significant_down.any():
+        down_dates = df.index[significant_down]
+        down_prices = df.loc[significant_down, "Low"] * 0.98  # Slightly below low
+        down_returns = daily_returns[significant_down] * 100
+        down_trace = go.Scatter(
+            x=down_dates,
+            y=down_prices,
+            mode="markers",
+            name="-5% Move",
+            marker=dict(
+                symbol="circle",
+                size=12,
+                color="#F44336",
+                line=dict(color="white", width=1)
+            ),
+            hovertemplate="%{x}<br>Change: %{customdata:.1f}%<extra></extra>",
+            customdata=down_returns
+        )
+        if show_volume:
+            fig.add_trace(down_trace, row=1, col=1)
+        else:
+            fig.add_trace(down_trace)
+
     # Add volume bars
     if show_volume:
         colors = ["#ef5350" if df["Close"].iloc[i] < df["Open"].iloc[i]
@@ -475,6 +528,51 @@ def create_plotly_line(ticker: str, period: str = "1y",
                     name=f"MA-{window}",
                     line=dict(color=colors[i % len(colors)], width=1.5)
                 ))
+
+    # Add markers for significant daily moves (>= 5% change)
+    daily_returns = df["Close"].pct_change()
+    significant_up = daily_returns >= 0.05
+    significant_down = daily_returns <= -0.05
+
+    # Markers for +5% days (green circles on the close price)
+    if significant_up.any():
+        up_dates = df.index[significant_up]
+        up_prices = df.loc[significant_up, "Close"]
+        up_returns = daily_returns[significant_up] * 100
+        fig.add_trace(go.Scatter(
+            x=up_dates,
+            y=up_prices,
+            mode="markers",
+            name="+5% Move",
+            marker=dict(
+                symbol="circle",
+                size=12,
+                color="#4CAF50",
+                line=dict(color="white", width=1)
+            ),
+            hovertemplate="%{x}<br>Change: +%{customdata:.1f}%<extra></extra>",
+            customdata=up_returns
+        ))
+
+    # Markers for -5% days (red circles on the close price)
+    if significant_down.any():
+        down_dates = df.index[significant_down]
+        down_prices = df.loc[significant_down, "Close"]
+        down_returns = daily_returns[significant_down] * 100
+        fig.add_trace(go.Scatter(
+            x=down_dates,
+            y=down_prices,
+            mode="markers",
+            name="-5% Move",
+            marker=dict(
+                symbol="circle",
+                size=12,
+                color="#F44336",
+                line=dict(color="white", width=1)
+            ),
+            hovertemplate="%{x}<br>Change: %{customdata:.1f}%<extra></extra>",
+            customdata=down_returns
+        ))
 
     fig.update_layout(
         title=f"{ticker.upper()} - {period} Price History",

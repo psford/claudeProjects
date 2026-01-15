@@ -24,6 +24,7 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Committed web dashboard | Success (b79b82f) |
 | - | Added ticker search with autocomplete | Success |
 | - | Installed streamlit-searchbox | Success |
+| - | Added 5% daily move markers to charts | Success |
 
 ---
 
