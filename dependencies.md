@@ -24,6 +24,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 |---------|---------|---------|
 | yfinance | 1.0 | Stock market data retrieval |
 | pandas | 2.3.3 | Data manipulation and analysis |
+| mplfinance | 0.12.10b0 | Financial charting (candlestick, OHLC) |
 
 ### Transitive Dependencies (via yfinance)
 
@@ -50,6 +51,18 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | pytz | Timezone handling |
 | tzdata | Timezone database |
 
+### Transitive Dependencies (via mplfinance)
+
+| Package | Purpose |
+|---------|---------|
+| matplotlib | Core plotting library |
+| pillow | Image handling |
+| cycler | Color cycling |
+| kiwisolver | Constraint solver |
+| fonttools | Font handling |
+| contourpy | Contour plotting |
+| pyparsing | Parser library |
+
 ---
 
 ## Project Files
@@ -62,13 +75,14 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | sessionState.md | Session context for continuity |
 | claudeLog.md | Terminal action log |
 | dependencies.md | This file |
+| ROADMAP.md | Future enhancements roadmap |
 | .gitignore | Git exclusions |
 
 ### Source Files
 
 | File | Purpose | Dependencies |
 |------|---------|--------------|
-| stock_analysis/stock_analyzer.py | Stock analysis tool | yfinance, pandas |
+| stock_analysis/stock_analyzer.py | Stock analysis + charting | yfinance, pandas, mplfinance |
 
 ---
 
@@ -84,4 +98,5 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/14/2026 | Added mplfinance for charting; added ROADMAP.md |
 | 01/13/2026 | Initial creation - documented yfinance, pandas, system tools |

@@ -5,6 +5,7 @@ A basic utility for fetching and analyzing stock data.
 
 import yfinance as yf
 import pandas as pd
+import mplfinance as mpf
 from datetime import datetime, timedelta
 
 
@@ -136,6 +137,159 @@ def print_stock_summary(ticker: str):
         print(f"  Annualized Volatility: {volatility*100:.2f}%")
 
     print(f"\n{'='*50}\n")
+
+
+def plot_candlestick(ticker: str, period: str = "6mo", volume: bool = True,
+                     style: str = "charles", save_path: str = None):
+    """
+    Plot a candlestick chart for a stock.
+
+    Args:
+        ticker: Stock symbol (e.g., 'AAPL')
+        period: Time period (1mo, 3mo, 6mo, 1y, 2y, 5y)
+        volume: Include volume bars below chart
+        style: Chart style (charles, yahoo, nightclouds, blueskies, etc.)
+        save_path: Optional file path to save the chart (e.g., 'chart.png')
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        print(f"No data available for {ticker}")
+        return
+
+    title = f"{ticker.upper()} - {period} Candlestick Chart"
+
+    kwargs = {
+        "type": "candle",
+        "volume": volume,
+        "style": style,
+        "title": title,
+        "ylabel": "Price ($)",
+        "ylabel_lower": "Volume" if volume else "",
+    }
+
+    if save_path:
+        kwargs["savefig"] = save_path
+        mpf.plot(df, **kwargs)
+        print(f"Chart saved to {save_path}")
+    else:
+        mpf.plot(df, **kwargs)
+
+
+def plot_with_moving_averages(ticker: str, period: str = "1y",
+                               mav: tuple = (20, 50, 200), volume: bool = True,
+                               style: str = "charles", save_path: str = None):
+    """
+    Plot candlestick chart with moving average overlays.
+
+    Args:
+        ticker: Stock symbol (e.g., 'AAPL')
+        period: Time period (1mo, 3mo, 6mo, 1y, 2y, 5y)
+        mav: Tuple of moving average windows (default: 20, 50, 200)
+        volume: Include volume bars below chart
+        style: Chart style
+        save_path: Optional file path to save the chart
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        print(f"No data available for {ticker}")
+        return
+
+    title = f"{ticker.upper()} with MA-{', '.join(map(str, mav))}"
+
+    kwargs = {
+        "type": "candle",
+        "volume": volume,
+        "style": style,
+        "title": title,
+        "ylabel": "Price ($)",
+        "mav": mav,
+    }
+
+    if save_path:
+        kwargs["savefig"] = save_path
+        mpf.plot(df, **kwargs)
+        print(f"Chart saved to {save_path}")
+    else:
+        mpf.plot(df, **kwargs)
+
+
+def plot_ohlc(ticker: str, period: str = "6mo", volume: bool = True,
+              style: str = "charles", save_path: str = None):
+    """
+    Plot an OHLC (Open-High-Low-Close) bar chart.
+
+    Args:
+        ticker: Stock symbol
+        period: Time period
+        volume: Include volume bars
+        style: Chart style
+        save_path: Optional file path to save the chart
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        print(f"No data available for {ticker}")
+        return
+
+    title = f"{ticker.upper()} - {period} OHLC Chart"
+
+    kwargs = {
+        "type": "ohlc",
+        "volume": volume,
+        "style": style,
+        "title": title,
+        "ylabel": "Price ($)",
+    }
+
+    if save_path:
+        kwargs["savefig"] = save_path
+        mpf.plot(df, **kwargs)
+        print(f"Chart saved to {save_path}")
+    else:
+        mpf.plot(df, **kwargs)
+
+
+def plot_line(ticker: str, period: str = "1y", volume: bool = False,
+              style: str = "charles", save_path: str = None):
+    """
+    Plot a simple line chart of closing prices.
+
+    Args:
+        ticker: Stock symbol
+        period: Time period
+        volume: Include volume bars
+        style: Chart style
+        save_path: Optional file path to save the chart
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        print(f"No data available for {ticker}")
+        return
+
+    title = f"{ticker.upper()} - {period} Price History"
+
+    kwargs = {
+        "type": "line",
+        "volume": volume,
+        "style": style,
+        "title": title,
+        "ylabel": "Price ($)",
+    }
+
+    if save_path:
+        kwargs["savefig"] = save_path
+        mpf.plot(df, **kwargs)
+        print(f"Chart saved to {save_path}")
+    else:
+        mpf.plot(df, **kwargs)
+
+
+def list_chart_styles():
+    """List all available mplfinance chart styles."""
+    styles = mpf.available_styles()
+    print("Available chart styles:")
+    for s in styles:
+        print(f"  - {s}")
+    return styles
 
 
 if __name__ == "__main__":
