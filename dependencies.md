@@ -31,6 +31,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | finnhub-python | 2.4.26 | Stock news API |
 | python-dotenv | 1.2.1 | Environment variable management |
 | bandit | 1.9.2 | Static security analysis (SAST) |
+| slack-sdk | 3.39.0 | Slack API for remote notifications |
 
 ### Transitive Dependencies (via yfinance)
 
