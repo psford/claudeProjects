@@ -105,9 +105,79 @@ def get_news_for_date(ticker: str, target_date: datetime, lookback_days: int = 2
         return None
 
 
+def _fetch_yfinance_news(ticker: str) -> list:
+    """Fetch recent news from yfinance."""
+    try:
+        stock = yf.Ticker(ticker)
+        news = stock.news or []
+        results = []
+
+        for item in news:
+            content = item.get('content', {})
+            if content:
+                pub_date = content.get('pubDate', '')
+                # Parse date from ISO format
+                news_date = None
+                if pub_date:
+                    try:
+                        news_date = datetime.fromisoformat(pub_date.replace('Z', '+00:00')).date()
+                    except (ValueError, AttributeError):
+                        pass
+
+                results.append({
+                    'headline': content.get('title', ''),
+                    'url': content.get('canonicalUrl', {}).get('url', ''),
+                    'image': content.get('thumbnail', {}).get('originalUrl', ''),
+                    'summary': content.get('summary', ''),
+                    'source': content.get('provider', {}).get('displayName', 'yfinance'),
+                    'date': news_date,
+                })
+
+        return results
+    except Exception:
+        return []
+
+
+def _score_news_relevance(headline: str, ticker: str) -> int:
+    """Score news relevance - higher is more relevant to the specific stock."""
+    score = 0
+    headline_lower = headline.lower()
+    ticker_lower = ticker.lower()
+
+    # Direct ticker mention is highly relevant
+    if ticker_lower in headline_lower:
+        score += 100
+
+    # Company name mentions (common ones)
+    company_keywords = {
+        'TSLA': ['tesla', 'musk', 'elon'],
+        'AAPL': ['apple', 'iphone', 'ipad', 'mac'],
+        'MSFT': ['microsoft', 'windows', 'azure'],
+        'GOOGL': ['google', 'alphabet', 'youtube'],
+        'AMZN': ['amazon', 'aws', 'bezos'],
+        'NVDA': ['nvidia', 'gpu', 'chip'],
+        'META': ['meta', 'facebook', 'instagram', 'zuckerberg'],
+    }
+
+    if ticker.upper() in company_keywords:
+        for keyword in company_keywords[ticker.upper()]:
+            if keyword in headline_lower:
+                score += 50
+
+    # Penalize generic market news
+    generic_terms = ['market', 'dow', 's&p', 'nasdaq', 'stocks', 'wall street']
+    generic_count = sum(1 for term in generic_terms if term in headline_lower)
+    if generic_count > 0 and score == 0:
+        score -= 10 * generic_count
+
+    return score
+
+
 def get_news_for_dates(ticker: str, dates: list, full_data: bool = False) -> dict:
     """
-    Batch fetch news for multiple dates.
+    Batch fetch news for multiple dates from multiple sources.
+
+    Sources: Finnhub (Yahoo, SeekingAlpha, CNBC) + yfinance (IBD, Zacks, Barrons, Benzinga)
 
     Args:
         ticker: Stock symbol
@@ -121,73 +191,92 @@ def get_news_for_dates(ticker: str, dates: list, full_data: bool = False) -> dic
     if not dates:
         return {}
 
+    all_news_items = []
+
+    # Source 1: Finnhub
     client = _get_finnhub_client()
-    if not client:
-        return {d: None for d in dates}
+    if client:
+        try:
+            min_date = min(dates)
+            max_date = max(dates)
 
-    try:
-        # Find the overall date range
-        min_date = min(dates)
-        max_date = max(dates)
+            if hasattr(min_date, 'to_pydatetime'):
+                min_date = min_date.to_pydatetime()
+            if hasattr(max_date, 'to_pydatetime'):
+                max_date = max_date.to_pydatetime()
 
-        # Convert to datetime if pandas Timestamp
-        if hasattr(min_date, 'to_pydatetime'):
-            min_date = min_date.to_pydatetime()
-        if hasattr(max_date, 'to_pydatetime'):
-            max_date = max_date.to_pydatetime()
+            start_date = min_date - timedelta(days=2)
+            end_date = max_date
 
-        # Fetch all news in the range (with 2 day buffer for lookback)
-        start_date = min_date - timedelta(days=2)
-        end_date = max_date
+            finnhub_news = client.company_news(
+                ticker,
+                _from=start_date.strftime('%Y-%m-%d'),
+                to=end_date.strftime('%Y-%m-%d')
+            )
 
-        all_news = client.company_news(
-            ticker,
-            _from=start_date.strftime('%Y-%m-%d'),
-            to=end_date.strftime('%Y-%m-%d')
-        )
+            for item in finnhub_news:
+                news_ts = item.get('datetime', 0)
+                if news_ts:
+                    news_date = datetime.fromtimestamp(news_ts).date()
+                    all_news_items.append({
+                        'headline': item.get('headline', ''),
+                        'url': item.get('url', ''),
+                        'image': item.get('image', ''),
+                        'summary': item.get('summary', ''),
+                        'source': item.get('source', 'Finnhub'),
+                        'date': news_date,
+                    })
+        except Exception:
+            pass
 
-        # Build a lookup by date (store full news item)
-        news_by_date = {}
-        for item in all_news:
-            news_ts = item.get('datetime', 0)
-            if news_ts:
-                news_date = datetime.fromtimestamp(news_ts).date()
-                if news_date not in news_by_date:
-                    news_by_date[news_date] = []
-                news_by_date[news_date].append(item)
+    # Source 2: yfinance (recent news only, but different sources)
+    yf_news = _fetch_yfinance_news(ticker)
+    all_news_items.extend(yf_news)
 
-        # For each target date, find news from that day or 1-2 days prior
-        results = {}
-        for target in dates:
-            target_dt = target.to_pydatetime() if hasattr(target, 'to_pydatetime') else target
-            target_d = target_dt.date()
+    # Build lookup by date with relevance scoring
+    news_by_date = {}
+    for item in all_news_items:
+        news_date = item.get('date')
+        if news_date:
+            if news_date not in news_by_date:
+                news_by_date[news_date] = []
+            # Add relevance score
+            item['relevance'] = _score_news_relevance(item.get('headline', ''), ticker)
+            news_by_date[news_date].append(item)
 
-            # Check target date, then day before, then 2 days before
-            news_item = None
-            for offset in range(3):
-                check_date = target_d - timedelta(days=offset)
-                if check_date in news_by_date and news_by_date[check_date]:
-                    news_item = news_by_date[check_date][0]  # Most recent on that day
-                    break
+    # Sort each date's news by relevance (highest first)
+    for date in news_by_date:
+        news_by_date[date].sort(key=lambda x: x.get('relevance', 0), reverse=True)
 
-            if news_item:
-                if full_data:
-                    results[target] = {
-                        'headline': news_item.get('headline', ''),
-                        'url': news_item.get('url', ''),
-                        'image': news_item.get('image', ''),
-                        'summary': news_item.get('summary', ''),
-                        'source': news_item.get('source', ''),
-                    }
-                else:
-                    results[target] = news_item.get('headline', '')
+    # For each target date, find the most relevant news
+    results = {}
+    for target in dates:
+        target_dt = target.to_pydatetime() if hasattr(target, 'to_pydatetime') else target
+        target_d = target_dt.date()
+
+        # Check target date, then day before, then 2 days before
+        news_item = None
+        for offset in range(3):
+            check_date = target_d - timedelta(days=offset)
+            if check_date in news_by_date and news_by_date[check_date]:
+                news_item = news_by_date[check_date][0]  # Most relevant on that day
+                break
+
+        if news_item:
+            if full_data:
+                results[target] = {
+                    'headline': news_item.get('headline', ''),
+                    'url': news_item.get('url', ''),
+                    'image': news_item.get('image', ''),
+                    'summary': news_item.get('summary', ''),
+                    'source': news_item.get('source', ''),
+                }
             else:
-                results[target] = None
+                results[target] = news_item.get('headline', '')
+        else:
+            results[target] = None
 
-        return results
-
-    except Exception:
-        return {d: None for d in dates}
+    return results
 
 
 def get_significant_moves_with_news(ticker: str, period: str = "1y",
