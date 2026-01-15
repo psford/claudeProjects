@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/13/2026
+# Session State - Last Updated 01/14/2026
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -27,7 +27,12 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ### Python
 - **Version:** 3.10.11
-- **Packages installed:** yfinance, pandas, numpy, beautifulsoup4
+- **Core packages:** yfinance, pandas, numpy, mplfinance, streamlit, plotly, finnhub-python, python-dotenv, streamlit-searchbox
+
+### Streamlit Server
+- **Status:** Running in background (task b809410)
+- **URL:** http://localhost:8501
+- **Note:** May need to restart if computer was rebooted
 
 ---
 
@@ -37,91 +42,119 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 claudeProjects/
 ├── .git/                    # Local git repository
 ├── .gitignore               # Excludes tokens, .env, credentials
-├── CLAUDE.md                # Guidelines and known issues (READ THIS FIRST)
-├── claudeLog.md             # Terminal action log (summaries only)
+├── .env                     # API keys (FINNHUB_API_KEY) - gitignored
+├── CLAUDE.md                # Guidelines and known issues (21 guidelines)
+├── claudeLog.md             # Terminal action log
 ├── sessionState.md          # This file
 ├── dependencies.md          # Package and tool dependencies
+├── ROADMAP.md               # Future enhancements roadmap
+├── whileYouWereAway.md      # Task queue for rate-limited periods
 ├── rules.md                 # Additional rules (pre-existing)
-├── claude_01132026-*.md     # Versioned backups of CLAUDE.md (7 total)
+├── claude_01132026-*.md     # Versioned backups (7 from 01/13)
+├── claude_01142026-*.md     # Versioned backups (4 from 01/14)
+├── docs/
+│   ├── TECHNICAL_SPEC.md    # System architecture, APIs, troubleshooting
+│   └── FUNCTIONAL_SPEC.md   # Business requirements, data mappings
 └── stock_analysis/
-    └── stock_analyzer.py    # yfinance stock analysis tool
+    ├── stock_analyzer.py    # Core analysis + charting + news functions
+    └── app.py               # Streamlit web dashboard
 ```
 
 ---
 
 ## Active Guidelines (from CLAUDE.md)
 
-1. Documentation in GitHub-flavored Markdown
-2. Version history is important - create sections as needed
-3. Request tooling with detailed options
-4. Math must be correct to 5 decimal places
-5. **Challenge user on bad practices/security issues**
-6. Provide alternatives when suggesting approaches
-7. Never sign up for paid services
-8. Provide detailed instructions for account access (no passwords)
-9. Never act illegally
-10. Cite sources where possible
-11. **Backup CLAUDE.md as `claude_MMDDYYYY-N.md` before each commit**
-12. **Log terminal summaries to claudeLog.md**
-13. **Naming: camelCase for JS/TS, snake_case for Python**
-14. **Session commands: "night!" = save state, "hello!" = restore state**
+1-14. (Previous guidelines - see CLAUDE.md)
+15. **Test before completion** - For web UI, must verify in browser, not just code analysis
+16. **Commit freely** - No permission needed, maintain rollback capability
+17. **No feature regression** - Never sacrifice functionality
+18. **Task file on startup** - Check whileYouWereAway.md on "hello!"
+19. **Enhancement tracking** - Document in ROADMAP.md
+20. **Step-by-step evaluation** - Stop after each task for user review
+21. **Guideline adherence** - Regularly refer back, update as needed
 
 ---
 
 ## Known Issues
 
 ### yfinance dividend yield (RESOLVED)
-- **Problem:** dividendYield returned 40% instead of 0.4%
 - **Fix:** Validation in `get_stock_info()` - values >10% divided by 100
-- **Status:** Implemented in stock_analyzer.py
+
+### Streamlit deprecation warning
+- **Issue:** `use_container_width` deprecated, use `width='stretch'`
+- **Status:** Fixed in app.py for button, still shows for plotly_chart
 
 ---
 
-## Stock Analysis Tool
+## Stock Analysis Dashboard
 
-**Location:** `stock_analysis/stock_analyzer.py`
+### Features Implemented
+- Ticker search with autocomplete (yfinance Search API)
+- Interactive Plotly charts (Candlestick, Line)
+- Moving average overlays (20, 50, 200-day)
+- Significant move markers (±5% daily change)
+- News integration (Finnhub + yfinance) with relevance scoring
+- Company info, price data, key metrics display
+- Performance summary (return, volatility, high/low)
+- Significant Moves panel with thumbnails and clickable headlines
 
-**Available functions:**
-- `get_stock_info(ticker)` - Basic info with validated dividend yield
-- `get_historical_data(ticker, period, interval)` - OHLCV data
-- `calculate_returns(df)` - Daily & cumulative returns
-- `calculate_moving_averages(df, windows)` - MA-20, MA-50, MA-200
-- `calculate_volatility(df)` - Annualized volatility
-- `get_financials(ticker)` - Income statement, balance sheet, cash flow
-- `compare_stocks(tickers, period)` - Normalized comparison
-- `print_stock_summary(ticker)` - Formatted console output
+### PENDING - NOT WORKING
+- **Wikipedia-style hover previews on chart markers**
+  - JavaScript injection approach attempted but not functional
+  - Code is in place but hover card does not appear
+  - DO NOT REFACTOR - needs investigation in next session
+  - Reference: Wikipedia Page Previews for design inspiration
 
-**Usage:**
-```python
-from stock_analyzer import *
-print_stock_summary("AAPL")
-```
+### Key Files
+- `stock_analysis/app.py` - Streamlit web interface
+- `stock_analysis/stock_analyzer.py` - Core analysis module
+
+### Key Functions in stock_analyzer.py
+- `search_tickers(query)` - Autocomplete search
+- `get_stock_info(ticker)` - Company info with validated dividend yield
+- `get_historical_data(ticker, period)` - OHLCV data
+- `create_plotly_candlestick(ticker, period, ...)` - Interactive chart
+- `create_plotly_line(ticker, period, ...)` - Line chart
+- `get_news_for_dates(ticker, dates)` - Batch news fetch
+- `get_significant_moves_with_news(ticker, period)` - Moves + news
+- `_score_news_relevance(headline, ticker)` - Prioritize stock-specific news
 
 ---
 
-## Git History (01/13/2026)
+## API Keys
+
+- **Finnhub:** Stored in `.env` as `FINNHUB_API_KEY`
+- **Rate limit:** 60 requests/minute (free tier)
+
+---
+
+## Git History (Recent - 01/14/2026)
 
 | Hash | Description |
 |------|-------------|
-| 54cde48 | Add session command guideline (#14) |
-| 00581a0 | Add dependencies.md |
-| 6778d6e | Update sessionState.md with guideline #13 |
-| 0c6fd34 | Add naming convention guideline |
-| c5ab836 | Add session state file for context restoration |
-| 8b97aee | Add terminal logging system |
-| 7feb79d | Fix dividend yield validation |
-| a6f414b | Add known issues section |
-| 01c3e5c | Add stock analysis tool |
-| a3dab31 | Clarify versioning guideline |
-| e8a4e37 | Initial commit |
+| 5f8491b | Add documentation specs and Wikipedia-style hover previews |
+| ed7fda6 | Combine multiple news sources with relevance scoring |
+| 3fe11f5 | Add commit freely guideline (#16) |
+| 907ea6c | Add news panel with thumbnails and clickable links |
+| bb981de | Add news headlines to significant move markers |
+| 862ceed | Add markers for significant daily price moves (5%+) |
 
 ---
 
-## Pending / Future Tasks
+## Pending Tasks
 
-- [ ] Set up GitHub authentication when ready for remote repos
-- [ ] Add visualization features to stock_analyzer (matplotlib/plotly)
-- [ ] Consider additional stock analysis functions (RSI, MACD, Bollinger Bands)
+### Immediate (from whileYouWereAway.md)
+- [x] Create technical specification - DONE
+- [x] Create functional specification - DONE
+- [x] Add no-regression guideline (#17) - DONE
+- [ ] **Wikipedia-style hover previews - NOT WORKING, NEEDS FIX**
+
+### Future (from ROADMAP.md)
+- [ ] Technical indicators (RSI, MACD, Bollinger Bands)
+- [ ] Multi-stock comparison chart
+- [ ] Portfolio tracker
+- [ ] Export to Excel
+- [ ] Unit tests
 
 ---
 
@@ -129,11 +162,10 @@ print_stock_summary("AAPL")
 
 **Say "hello!"** to restore context automatically.
 
-Or manually:
-1. Read `CLAUDE.md` for current guidelines
-2. Read `sessionState.md` (this file) for context
-3. Check `claudeLog.md` for recent actions
-4. Read `dependencies.md` for installed packages
-5. Run `git log --oneline` to see commit history
+Then:
+1. Check if Streamlit server is running: `curl http://localhost:8501`
+2. If not, start it: `streamlit run stock_analysis/app.py`
+3. Check `whileYouWereAway.md` for new tasks
+4. Resume work on Wikipedia-style hover previews (NOT WORKING)
 
 **Say "night!"** at end of session to save state.

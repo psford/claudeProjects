@@ -33,6 +33,9 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Created FUNCTIONAL_SPEC.md | Success |
 | - | Implemented Wikipedia-style hover previews | Success |
 | - | Fixed deprecation warning (use_container_width) | Success |
+| - | Attempted Wikipedia-style hover on chart markers | **FAILED** - not rendering |
+| - | Updated guideline #15 (stricter testing requirements) | Success |
+| - | "night!" - Saved session state | Success |
 
 ---
 

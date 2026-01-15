@@ -8,8 +8,10 @@ Run with: streamlit run stock_analysis/app.py
 import streamlit as st
 from streamlit_searchbox import st_searchbox
 from dotenv import load_dotenv
+import streamlit.components.v1 as components
 import os
 import html
+import json
 
 # Load environment variables from project root
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
@@ -23,6 +25,214 @@ from stock_analyzer import (
     search_tickers,
     get_significant_moves_with_news,
 )
+
+
+def create_chart_hover_preview_js(news_data):
+    """
+    Generate JavaScript for Wikipedia-style hover previews on Plotly chart markers.
+
+    Args:
+        news_data: Dict mapping date strings to news info dicts
+
+    Returns:
+        HTML/JS string to inject after chart
+    """
+    # Escape the JSON data for safe embedding
+    news_json = json.dumps(news_data)
+
+    return f'''
+    <div id="wiki-hover-card" style="
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        width: 320px;
+        background: white;
+        border: 1px solid #a2a9b1;
+        border-radius: 4px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        pointer-events: none;
+    ">
+        <img id="wiki-hover-image" style="
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-bottom: 1px solid #eaecf0;
+            display: none;
+        ">
+        <div id="wiki-hover-placeholder" style="
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        ">📰</div>
+        <div style="padding: 12px 16px;">
+            <div id="wiki-hover-date" style="
+                font-size: 12px;
+                color: #72777d;
+                margin-bottom: 4px;
+            "></div>
+            <div id="wiki-hover-return" style="
+                font-size: 14px;
+                font-weight: 700;
+                margin-bottom: 8px;
+            "></div>
+            <div id="wiki-hover-headline" style="
+                font-size: 14px;
+                font-weight: 600;
+                color: #202122;
+                line-height: 1.4;
+                margin-bottom: 8px;
+            "></div>
+            <div id="wiki-hover-summary" style="
+                font-size: 12px;
+                color: #54595d;
+                line-height: 1.5;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            "></div>
+            <div id="wiki-hover-source" style="
+                font-size: 11px;
+                color: #72777d;
+                margin-top: 8px;
+            "></div>
+        </div>
+    </div>
+
+    <script>
+    (function() {{
+        const newsData = {news_json};
+        const card = document.getElementById('wiki-hover-card');
+        const cardImage = document.getElementById('wiki-hover-image');
+        const cardPlaceholder = document.getElementById('wiki-hover-placeholder');
+        const cardDate = document.getElementById('wiki-hover-date');
+        const cardReturn = document.getElementById('wiki-hover-return');
+        const cardHeadline = document.getElementById('wiki-hover-headline');
+        const cardSummary = document.getElementById('wiki-hover-summary');
+        const cardSource = document.getElementById('wiki-hover-source');
+
+        let hoverTimeout = null;
+
+        function showCard(x, y, dateStr) {{
+            const news = newsData[dateStr];
+            if (!news) return;
+
+            // Set content
+            cardDate.textContent = dateStr;
+
+            const returnPct = news.return_pct;
+            const sign = returnPct >= 0 ? '+' : '';
+            const color = returnPct >= 0 ? '#16a34a' : '#dc2626';
+            cardReturn.textContent = sign + returnPct.toFixed(1) + '% move';
+            cardReturn.style.color = color;
+
+            if (news.headline) {{
+                cardHeadline.textContent = news.headline;
+                cardHeadline.style.display = 'block';
+            }} else {{
+                cardHeadline.style.display = 'none';
+            }}
+
+            if (news.summary) {{
+                cardSummary.textContent = news.summary;
+                cardSummary.style.display = 'block';
+            }} else {{
+                cardSummary.style.display = 'none';
+            }}
+
+            if (news.source) {{
+                cardSource.textContent = 'Source: ' + news.source;
+                cardSource.style.display = 'block';
+            }} else {{
+                cardSource.style.display = 'none';
+            }}
+
+            if (news.image) {{
+                cardImage.src = news.image;
+                cardImage.style.display = 'block';
+                cardPlaceholder.style.display = 'none';
+                cardImage.onerror = function() {{
+                    cardImage.style.display = 'none';
+                    cardPlaceholder.style.display = 'flex';
+                }};
+            }} else {{
+                cardImage.style.display = 'none';
+                cardPlaceholder.style.display = 'flex';
+            }}
+
+            // Position card (above the cursor, centered)
+            const cardWidth = 320;
+            const cardHeight = card.offsetHeight || 300;
+            let left = x - cardWidth / 2;
+            let top = y - cardHeight - 20;
+
+            // Keep within viewport
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            if (left < 10) left = 10;
+            if (left + cardWidth > vw - 10) left = vw - cardWidth - 10;
+            if (top < 10) top = y + 20; // Show below if no room above
+
+            card.style.left = left + 'px';
+            card.style.top = top + 'px';
+            card.style.display = 'block';
+        }}
+
+        function hideCard() {{
+            card.style.display = 'none';
+        }}
+
+        // Find all Plotly charts and attach hover listeners
+        function attachHoverListeners() {{
+            const plots = document.querySelectorAll('.js-plotly-plot');
+            plots.forEach(function(plot) {{
+                if (plot._hoverAttached) return;
+                plot._hoverAttached = true;
+
+                plot.on('plotly_hover', function(data) {{
+                    if (hoverTimeout) clearTimeout(hoverTimeout);
+
+                    const point = data.points[0];
+                    // Check if this is a marker trace (+5% or -5% move)
+                    if (point.data.name && (point.data.name.includes('5% Move'))) {{
+                        const x = data.event.clientX || data.event.pageX;
+                        const y = data.event.clientY || data.event.pageY;
+
+                        // Extract date from the point
+                        const dateStr = point.x.substring(0, 10); // Get YYYY-MM-DD
+
+                        // Add delay like Wikipedia (400ms)
+                        hoverTimeout = setTimeout(function() {{
+                            showCard(x, y, dateStr);
+                        }}, 400);
+                    }}
+                }});
+
+                plot.on('plotly_unhover', function(data) {{
+                    if (hoverTimeout) clearTimeout(hoverTimeout);
+                    hideCard();
+                }});
+            }});
+        }}
+
+        // Attach listeners now and on future chart updates
+        attachHoverListeners();
+
+        // Also watch for DOM changes (when Streamlit rerenders)
+        const observer = new MutationObserver(function(mutations) {{
+            setTimeout(attachHoverListeners, 100);
+        }});
+        observer.observe(document.body, {{ childList: true, subtree: true }});
+    }})();
+    </script>
+    '''
 
 
 def create_wiki_preview_css():
@@ -320,6 +530,24 @@ elif ticker:
                 # Chart section
                 st.subheader(f"{info.get('name', ticker)} ({ticker})")
 
+                # Fetch significant moves with news for chart hover previews
+                moves_for_chart = get_significant_moves_with_news(ticker, period=period)
+
+                # Build news data dict for JavaScript
+                news_data_for_js = {}
+                for move in moves_for_chart:
+                    date_str = move['date'].strftime('%Y-%m-%d')
+                    news = move.get('news') or {}
+                    news_data_for_js[date_str] = {
+                        'return_pct': move['return_pct'],
+                        'direction': move['direction'],
+                        'headline': news.get('headline', ''),
+                        'summary': news.get('summary', ''),
+                        'image': news.get('image', ''),
+                        'url': news.get('url', ''),
+                        'source': news.get('source', ''),
+                    }
+
                 if chart_type == "Candlestick":
                     fig = create_plotly_candlestick(
                         ticker,
@@ -335,7 +563,15 @@ elif ticker:
                     )
 
                 if fig:
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, key="main_chart")
+
+                    # Inject JavaScript for hover preview on chart markers
+                    # Using st.markdown to inject directly into page (not iframe)
+                    if news_data_for_js:
+                        st.markdown(
+                            create_chart_hover_preview_js(news_data_for_js),
+                            unsafe_allow_html=True
+                        )
 
                 # Info columns
                 col1, col2, col3 = st.columns(3)
@@ -414,13 +650,12 @@ elif ticker:
                         f"${hist['Low'].min():.2f}"
                     )
 
-                # Significant Moves with News
+                # Significant Moves with News (reuse data from chart)
                 st.markdown("---")
                 st.markdown("### Significant Moves (±5%)")
-                st.caption("Days with 5% or greater price change. Hover over headlines for preview.")
+                st.caption("Days with 5% or greater price change. Hover over chart markers for preview.")
 
-                with st.spinner("Loading news for significant moves..."):
-                    moves = get_significant_moves_with_news(ticker, period=period)
+                moves = moves_for_chart  # Reuse already-fetched data
 
                 if moves:
                     # Inject CSS for Wikipedia-style previews
