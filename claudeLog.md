@@ -28,6 +28,11 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Integrated Finnhub news API for marker hover | Success |
 | - | Created .env for API key storage | Success |
 | - | Added news panel with thumbnails and links | Success |
+| - | Added guidelines #17-21 to CLAUDE.md | Success |
+| - | Created TECHNICAL_SPEC.md | Success |
+| - | Created FUNCTIONAL_SPEC.md | Success |
+| - | Implemented Wikipedia-style hover previews | Success |
+| - | Fixed deprecation warning (use_container_width) | Success |
 
 ---
 

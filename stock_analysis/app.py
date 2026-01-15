@@ -9,6 +9,7 @@ import streamlit as st
 from streamlit_searchbox import st_searchbox
 from dotenv import load_dotenv
 import os
+import html
 
 # Load environment variables from project root
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
@@ -22,6 +23,196 @@ from stock_analyzer import (
     search_tickers,
     get_significant_moves_with_news,
 )
+
+
+def create_wiki_preview_css():
+    """Generate CSS for Wikipedia-style hover previews."""
+    return """
+    <style>
+    /* Wikipedia-style preview container */
+    .wiki-preview-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    /* The trigger link */
+    .wiki-preview-trigger {
+        color: #1a73e8;
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 1px dotted #1a73e8;
+    }
+
+    .wiki-preview-trigger:hover {
+        color: #1558b0;
+    }
+
+    /* The preview card - hidden by default */
+    .wiki-preview-card {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        z-index: 1000;
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 10px;
+        width: 320px;
+        background: white;
+        border: 1px solid #a2a9b1;
+        border-radius: 2px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        padding: 0;
+        transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+        transition-delay: 0.3s;
+    }
+
+    /* Show card on hover with delay (like Wikipedia's 650ms) */
+    .wiki-preview-container:hover .wiki-preview-card {
+        visibility: visible;
+        opacity: 1;
+        transition-delay: 0.4s;
+    }
+
+    /* Preview image */
+    .wiki-preview-image {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-bottom: 1px solid #eaecf0;
+    }
+
+    /* No image placeholder */
+    .wiki-preview-no-image {
+        width: 100%;
+        height: 80px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+    }
+
+    /* Preview content area */
+    .wiki-preview-content {
+        padding: 12px 16px;
+    }
+
+    /* Preview title */
+    .wiki-preview-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #202122;
+        margin: 0 0 8px 0;
+        line-height: 1.3;
+    }
+
+    /* Preview summary */
+    .wiki-preview-summary {
+        font-size: 13px;
+        color: #54595d;
+        line-height: 1.5;
+        margin: 0 0 8px 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Preview source */
+    .wiki-preview-source {
+        font-size: 11px;
+        color: #72777d;
+        margin: 0;
+    }
+
+    /* Arrow pointer */
+    .wiki-preview-card::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 20px;
+        border: 8px solid transparent;
+        border-top-color: white;
+    }
+
+    .wiki-preview-card::before {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 19px;
+        border: 9px solid transparent;
+        border-top-color: #a2a9b1;
+    }
+
+    /* Adjust position for cards near right edge */
+    .wiki-preview-container.align-right .wiki-preview-card {
+        left: auto;
+        right: 0;
+    }
+
+    .wiki-preview-container.align-right .wiki-preview-card::after {
+        left: auto;
+        right: 20px;
+    }
+
+    .wiki-preview-container.align-right .wiki-preview-card::before {
+        left: auto;
+        right: 19px;
+    }
+    </style>
+    """
+
+
+def create_wiki_preview_html(headline, url, image_url, summary, source, index):
+    """
+    Generate HTML for a Wikipedia-style hover preview.
+
+    Args:
+        headline: News headline text
+        url: Link to full article
+        image_url: Thumbnail image URL
+        summary: Article summary text
+        source: News source name
+        index: Unique index for this preview
+
+    Returns:
+        HTML string with hover preview
+    """
+    # Escape HTML entities to prevent XSS
+    safe_headline = html.escape(headline or "No headline")
+    safe_summary = html.escape(summary or "")
+    safe_source = html.escape(source or "Unknown source")
+    safe_url = html.escape(url or "#")
+
+    # Truncate summary if too long
+    if len(safe_summary) > 200:
+        safe_summary = safe_summary[:197] + "..."
+
+    # Build image section
+    if image_url:
+        safe_image = html.escape(image_url)
+        image_html = f'<img class="wiki-preview-image" src="{safe_image}" alt="" onerror="this.style.display=\'none\'">'
+    else:
+        image_html = '<div class="wiki-preview-no-image">📰</div>'
+
+    # Build summary section (only if summary exists)
+    summary_html = f'<p class="wiki-preview-summary">{safe_summary}</p>' if safe_summary else ''
+
+    return f'''
+    <div class="wiki-preview-container" id="preview-{index}">
+        <a href="{safe_url}" target="_blank" class="wiki-preview-trigger">{safe_headline}</a>
+        <div class="wiki-preview-card">
+            {image_html}
+            <div class="wiki-preview-content">
+                <p class="wiki-preview-title">{safe_headline}</p>
+                {summary_html}
+                <p class="wiki-preview-source">Source: {safe_source}</p>
+            </div>
+        </div>
+    </div>
+    '''
 
 
 def ticker_search(query: str) -> list:
@@ -102,7 +293,7 @@ with st.sidebar:
         show_volume = False
 
     # Analyze button
-    analyze = st.button("🔍 Analyze", type="primary", use_container_width=True)
+    analyze = st.button("🔍 Analyze", type="primary", width="stretch")
 
 # Build moving averages list
 moving_averages = []
@@ -144,7 +335,7 @@ elif ticker:
                     )
 
                 if fig:
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
 
                 # Info columns
                 col1, col2, col3 = st.columns(3)
@@ -226,13 +417,16 @@ elif ticker:
                 # Significant Moves with News
                 st.markdown("---")
                 st.markdown("### Significant Moves (±5%)")
-                st.caption("Days with 5% or greater price change, with related news")
+                st.caption("Days with 5% or greater price change. Hover over headlines for preview.")
 
                 with st.spinner("Loading news for significant moves..."):
                     moves = get_significant_moves_with_news(ticker, period=period)
 
                 if moves:
-                    for move in moves:
+                    # Inject CSS for Wikipedia-style previews
+                    st.markdown(create_wiki_preview_css(), unsafe_allow_html=True)
+
+                    for i, move in enumerate(moves):
                         date_str = move['date'].strftime('%Y-%m-%d')
                         ret = move['return_pct']
                         direction = move['direction']
@@ -252,25 +446,26 @@ elif ticker:
 
                             with col_content:
                                 if news:
-                                    # Show thumbnail and headline
-                                    thumb_col, text_col = st.columns([1, 3])
+                                    # Create Wikipedia-style hover preview
+                                    headline = news.get('headline', 'No headline')
+                                    url = news.get('url', '')
+                                    image = news.get('image', '')
+                                    summary = news.get('summary', '')
+                                    source = news.get('source', '')
 
-                                    with thumb_col:
-                                        if news.get('image'):
-                                            st.image(news['image'], width=120)
+                                    preview_html = create_wiki_preview_html(
+                                        headline=headline,
+                                        url=url,
+                                        image_url=image,
+                                        summary=summary,
+                                        source=source,
+                                        index=i
+                                    )
+                                    st.markdown(preview_html, unsafe_allow_html=True)
 
-                                    with text_col:
-                                        headline = news.get('headline', 'No headline')
-                                        url = news.get('url', '')
-                                        source = news.get('source', '')
-
-                                        if url:
-                                            st.markdown(f"**[{headline}]({url})**")
-                                        else:
-                                            st.markdown(f"**{headline}**")
-
-                                        if source:
-                                            st.caption(f"Source: {source}")
+                                    # Show source below
+                                    if source:
+                                        st.caption(f"Source: {source}")
                                 else:
                                     st.markdown("*No news found for this date*")
 
