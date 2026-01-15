@@ -9,6 +9,38 @@ import mplfinance as mpf
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+from typing import Optional
+
+
+def search_tickers(query: str, max_results: int = 10) -> list:
+    """
+    Search for ticker symbols by company name or symbol.
+
+    Args:
+        query: Search term (company name or partial ticker)
+        max_results: Maximum number of results to return
+
+    Returns:
+        List of dicts with 'symbol', 'name', 'exchange', 'type' keys
+    """
+    if not query or len(query) < 1:
+        return []
+
+    try:
+        search = yf.Search(query, max_results=max_results)
+        results = []
+
+        for quote in search.quotes:
+            results.append({
+                "symbol": quote.get("symbol", ""),
+                "name": quote.get("longname") or quote.get("shortname", ""),
+                "exchange": quote.get("exchDisp", ""),
+                "type": quote.get("typeDisp", "Equity"),
+            })
+
+        return results
+    except Exception:
+        return []
 
 
 def get_stock_info(ticker: str) -> dict:

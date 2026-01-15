@@ -27,6 +27,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | mplfinance | 0.12.10b0 | Financial charting (candlestick, OHLC) |
 | streamlit | 1.53.0 | Web dashboard framework |
 | plotly | 6.5.2 | Interactive charts |
+| streamlit-searchbox | 0.1.24 | Autocomplete search component |
 
 ### Transitive Dependencies (via yfinance)
 

@@ -6,6 +6,7 @@ Run with: streamlit run stock_analysis/app.py
 """
 
 import streamlit as st
+from streamlit_searchbox import st_searchbox
 from stock_analyzer import (
     get_stock_info,
     get_historical_data,
@@ -13,7 +14,25 @@ from stock_analyzer import (
     calculate_volatility,
     create_plotly_candlestick,
     create_plotly_line,
+    search_tickers,
 )
+
+
+def ticker_search(query: str) -> list:
+    """Search function for the searchbox component."""
+    if not query or len(query) < 2:
+        return []
+
+    results = search_tickers(query, max_results=8)
+    # Format results for searchbox: list of (display_text, value) tuples
+    options = []
+    for r in results:
+        display = f"{r['symbol']} - {r['name']}"
+        if r['exchange']:
+            display += f" ({r['exchange']})"
+        options.append((display, r['symbol']))
+
+    return options
 
 # Page configuration
 st.set_page_config(
@@ -30,13 +49,20 @@ st.markdown("---")
 with st.sidebar:
     st.header("Settings")
 
-    # Ticker input
-    ticker = st.text_input(
-        "Stock Ticker",
-        value="AAPL",
-        max_chars=10,
-        help="Enter a stock symbol (e.g., AAPL, MSFT, GOOGL)"
-    ).upper().strip()
+    # Ticker search with autocomplete
+    st.markdown("**Search Stock**")
+    selected = st_searchbox(
+        ticker_search,
+        key="ticker_searchbox",
+        placeholder="Type company name or ticker...",
+        default="AAPL",
+    )
+
+    # Extract ticker from selection
+    ticker = selected if selected else "AAPL"
+    if isinstance(ticker, tuple):
+        ticker = ticker[1]  # Get the symbol from (display, symbol) tuple
+    ticker = ticker.upper().strip()
 
     # Period selector
     period = st.selectbox(
