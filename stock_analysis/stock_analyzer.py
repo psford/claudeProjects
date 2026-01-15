@@ -140,7 +140,7 @@ def print_stock_summary(ticker: str):
 
 
 def plot_candlestick(ticker: str, period: str = "6mo", volume: bool = True,
-                     style: str = "charles", save_path: str = None):
+                     style: str = "tradingview", save_path: str = None):
     """
     Plot a candlestick chart for a stock.
 
@@ -177,7 +177,7 @@ def plot_candlestick(ticker: str, period: str = "6mo", volume: bool = True,
 
 def plot_with_moving_averages(ticker: str, period: str = "1y",
                                mav: tuple = (20, 50, 200), volume: bool = True,
-                               style: str = "charles", save_path: str = None):
+                               style: str = "tradingview", save_path: str = None):
     """
     Plot candlestick chart with moving average overlays.
 
@@ -214,7 +214,7 @@ def plot_with_moving_averages(ticker: str, period: str = "1y",
 
 
 def plot_ohlc(ticker: str, period: str = "6mo", volume: bool = True,
-              style: str = "charles", save_path: str = None):
+              style: str = "tradingview", save_path: str = None):
     """
     Plot an OHLC (Open-High-Low-Close) bar chart.
 
@@ -249,7 +249,7 @@ def plot_ohlc(ticker: str, period: str = "6mo", volume: bool = True,
 
 
 def plot_line(ticker: str, period: str = "1y", volume: bool = False,
-              style: str = "charles", save_path: str = None):
+              style: str = "tradingview", save_path: str = None):
     """
     Plot a simple line chart of closing prices.
 
