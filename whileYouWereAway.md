@@ -3,7 +3,7 @@
 1. ~~Add a future enhancement request for a static analyzer for code security.~~ **DONE** - Installed Bandit, created helpers/security_scan.py. Rule: No code merged to main without passing scan.
 2. ~~Add a new guideline to evaluate whether or not you are really using the information that is read into the context window.~~ **DONE** - Added as guideline #22 (context window efficiency / hot-cold storage). CLAUDE.md is persistent storage.
 3. ~~Another guideline is to write local code wherever possible to prevent unneeded calls to Claude cloud.~~ **DONE** - Added as guideline #24 (local helper code over API calls). helpers/ folder created with security_scan.py as first tool.
-4. ~~I won't always be home at this PC - please evaluate ways that you could communicate with me remotely.~~ **DONE** - Set up Slack integration (psforddigitaldesign.slack.com). Created helpers/slack_notify.py. Messages go to #claude-notifications.
+4. ~~I won't always be home at this PC - please evaluate ways that you could communicate with me remotely.~~ **DONE** - Set up Slack integration (psforddigitaldesign.slack.com). Created helpers/slack_notify.py for sending and helpers/slack_listener.py for receiving. Two-way communication via #claude-notifications. Run listener with: `python helpers/slack_listener.py`
 5. ~~Look through your dependencies and see if rules.md is referenced anywhere.~~ **DONE** - File was empty, deleted.
 6. Give me suggestions on how we could add dynamic analysis security tools to our SDLC.
 7. Any time I start a prompt with "as a user" add that to the functional requirements.

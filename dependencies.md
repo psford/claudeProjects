@@ -32,6 +32,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | python-dotenv | 1.2.1 | Environment variable management |
 | bandit | 1.9.2 | Static security analysis (SAST) |
 | slack-sdk | 3.39.0 | Slack API for remote notifications |
+| slack-bolt | 1.27.0 | Slack Socket Mode listener framework |
 
 ### Transitive Dependencies (via yfinance)
 
@@ -105,6 +106,9 @@ Tracking all libraries, tools, and data dependencies used in this project.
 |------|---------|--------------|
 | stock_analysis/stock_analyzer.py | Stock analysis + charting | yfinance, pandas, mplfinance, plotly |
 | stock_analysis/app.py | Streamlit web dashboard | streamlit, stock_analyzer |
+| helpers/slack_notify.py | Slack notification sender | slack-sdk, python-dotenv |
+| helpers/slack_listener.py | Slack message receiver (background) | slack-bolt, python-dotenv |
+| helpers/security_scan.py | SAST security scanner wrapper | bandit |
 
 ---
 
@@ -120,6 +124,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/15/2026 | Added slack-bolt for Socket Mode listener; documented helper scripts |
 | 01/14/2026 | Added streamlit, plotly for web dashboard; added app.py |
 | 01/14/2026 | Added mplfinance for charting; added ROADMAP.md |
 | 01/13/2026 | Initial creation - documented yfinance, pandas, system tools |

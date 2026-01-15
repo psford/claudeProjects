@@ -17,3 +17,9 @@ Thumbs.db
 __pycache__/
 *.pyc
 *.pyo
+
+# Log and temp files
+*.log
+*_output.txt
+slack_inbox.json
+nul

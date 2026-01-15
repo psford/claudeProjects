@@ -56,6 +56,9 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Set up Slack integration (Task 4) | Success |
 | - | Created helpers/slack_notify.py | Success |
 | - | Sent test message to #claude-notifications | Success |
+| - | Installed slack-bolt for Socket Mode | Success (v1.27.0) |
+| - | Created helpers/slack_listener.py | Success |
+| - | Started Slack listener in background | Success (connected) |
 
 ---
 
