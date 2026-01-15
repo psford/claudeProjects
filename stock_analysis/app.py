@@ -58,11 +58,14 @@ with st.sidebar:
         default="AAPL",
     )
 
-    # Extract ticker from selection
-    ticker = selected if selected else "AAPL"
-    if isinstance(ticker, tuple):
-        ticker = ticker[1]  # Get the symbol from (display, symbol) tuple
-    ticker = ticker.upper().strip()
+    # Extract ticker from selection (None if cleared)
+    ticker = None
+    if selected:
+        if isinstance(selected, tuple):
+            ticker = selected[1]  # Get the symbol from (display, symbol) tuple
+        else:
+            ticker = selected
+        ticker = ticker.upper().strip() if ticker else None
 
     # Period selector
     period = st.selectbox(
@@ -104,7 +107,9 @@ if show_ma200:
     moving_averages.append(200)
 
 # Main content
-if ticker:
+if not ticker:
+    st.info("Enter a company name or ticker symbol in the sidebar to get started.")
+elif ticker:
     # Fetch data
     with st.spinner(f"Fetching data for {ticker}..."):
         try:
