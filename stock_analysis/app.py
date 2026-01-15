@@ -7,6 +7,11 @@ Run with: streamlit run stock_analysis/app.py
 
 import streamlit as st
 from streamlit_searchbox import st_searchbox
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from project root
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 from stock_analyzer import (
     get_stock_info,
     get_historical_data,

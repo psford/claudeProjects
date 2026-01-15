@@ -10,6 +10,23 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from typing import Optional
+import finnhub
+from dotenv import load_dotenv
+import os
+
+# Load environment variables for API keys
+load_dotenv()
+_finnhub_client = None
+
+
+def _get_finnhub_client():
+    """Get or create Finnhub client (singleton)."""
+    global _finnhub_client
+    if _finnhub_client is None:
+        api_key = os.getenv("FINNHUB_API_KEY")
+        if api_key:
+            _finnhub_client = finnhub.Client(api_key=api_key)
+    return _finnhub_client
 
 
 def search_tickers(query: str, max_results: int = 10) -> list:
@@ -41,6 +58,122 @@ def search_tickers(query: str, max_results: int = 10) -> list:
         return results
     except Exception:
         return []
+
+
+def get_news_for_date(ticker: str, target_date: datetime, lookback_days: int = 2) -> Optional[str]:
+    """
+    Get the most relevant news headline for a stock on or before a specific date.
+
+    News that causes price moves often comes out after market close the prior day,
+    so we look back up to lookback_days before the target date.
+
+    Args:
+        ticker: Stock symbol (e.g., 'AAPL')
+        target_date: The date of the significant price move
+        lookback_days: Number of days to look back for news (default 2)
+
+    Returns:
+        Most relevant headline string, or None if no news found
+    """
+    client = _get_finnhub_client()
+    if not client:
+        return None
+
+    try:
+        # Convert target_date to datetime if it's a pandas Timestamp
+        if hasattr(target_date, 'to_pydatetime'):
+            target_date = target_date.to_pydatetime()
+
+        # Search from lookback_days before to the target date
+        start_date = target_date - timedelta(days=lookback_days)
+        end_date = target_date
+
+        news = client.company_news(
+            ticker,
+            _from=start_date.strftime('%Y-%m-%d'),
+            to=end_date.strftime('%Y-%m-%d')
+        )
+
+        if news:
+            # Sort by datetime (newest first) and return the most recent headline
+            news_sorted = sorted(news, key=lambda x: x.get('datetime', 0), reverse=True)
+            return news_sorted[0].get('headline', None)
+
+        return None
+
+    except Exception:
+        return None
+
+
+def get_news_for_dates(ticker: str, dates: list) -> dict:
+    """
+    Batch fetch news headlines for multiple dates.
+
+    Args:
+        ticker: Stock symbol
+        dates: List of datetime objects
+
+    Returns:
+        Dict mapping date to headline (or None if no news)
+    """
+    if not dates:
+        return {}
+
+    client = _get_finnhub_client()
+    if not client:
+        return {d: None for d in dates}
+
+    try:
+        # Find the overall date range
+        min_date = min(dates)
+        max_date = max(dates)
+
+        # Convert to datetime if pandas Timestamp
+        if hasattr(min_date, 'to_pydatetime'):
+            min_date = min_date.to_pydatetime()
+        if hasattr(max_date, 'to_pydatetime'):
+            max_date = max_date.to_pydatetime()
+
+        # Fetch all news in the range (with 2 day buffer for lookback)
+        start_date = min_date - timedelta(days=2)
+        end_date = max_date
+
+        all_news = client.company_news(
+            ticker,
+            _from=start_date.strftime('%Y-%m-%d'),
+            to=end_date.strftime('%Y-%m-%d')
+        )
+
+        # Build a lookup by date
+        news_by_date = {}
+        for item in all_news:
+            news_ts = item.get('datetime', 0)
+            if news_ts:
+                news_date = datetime.fromtimestamp(news_ts).date()
+                if news_date not in news_by_date:
+                    news_by_date[news_date] = []
+                news_by_date[news_date].append(item.get('headline', ''))
+
+        # For each target date, find news from that day or 1-2 days prior
+        results = {}
+        for target in dates:
+            target_dt = target.to_pydatetime() if hasattr(target, 'to_pydatetime') else target
+            target_d = target_dt.date()
+
+            # Check target date, then day before, then 2 days before
+            headline = None
+            for offset in range(3):
+                check_date = target_d - timedelta(days=offset)
+                if check_date in news_by_date and news_by_date[check_date]:
+                    headline = news_by_date[check_date][0]  # Most recent on that day
+                    break
+
+            results[target] = headline
+
+        return results
+
+    except Exception:
+        return {d: None for d in dates}
 
 
 def get_stock_info(ticker: str) -> dict:
@@ -401,11 +534,28 @@ def create_plotly_candlestick(ticker: str, period: str = "6mo",
     significant_up = daily_returns >= 0.05
     significant_down = daily_returns <= -0.05
 
+    # Batch fetch news for all significant dates
+    all_significant_dates = list(df.index[significant_up | significant_down])
+    news_headlines = get_news_for_dates(ticker, all_significant_dates) if all_significant_dates else {}
+
     # Markers for +5% days (green circles above the high)
     if significant_up.any():
         up_dates = df.index[significant_up]
         up_prices = df.loc[significant_up, "High"] * 1.02  # Slightly above high
         up_returns = daily_returns[significant_up] * 100
+
+        # Build hover text with news
+        up_hover_text = []
+        for date, ret in zip(up_dates, up_returns):
+            headline = news_headlines.get(date, None)
+            text = f"{date.strftime('%Y-%m-%d')}<br>Change: +{ret:.1f}%"
+            if headline:
+                # Truncate long headlines
+                if len(headline) > 80:
+                    headline = headline[:77] + "..."
+                text += f"<br><br><b>News:</b> {headline}"
+            up_hover_text.append(text)
+
         up_trace = go.Scatter(
             x=up_dates,
             y=up_prices,
@@ -417,8 +567,8 @@ def create_plotly_candlestick(ticker: str, period: str = "6mo",
                 color="#4CAF50",
                 line=dict(color="white", width=1)
             ),
-            hovertemplate="%{x}<br>Change: +%{customdata:.1f}%<extra></extra>",
-            customdata=up_returns
+            hovertemplate="%{text}<extra></extra>",
+            text=up_hover_text
         )
         if show_volume:
             fig.add_trace(up_trace, row=1, col=1)
@@ -430,6 +580,19 @@ def create_plotly_candlestick(ticker: str, period: str = "6mo",
         down_dates = df.index[significant_down]
         down_prices = df.loc[significant_down, "Low"] * 0.98  # Slightly below low
         down_returns = daily_returns[significant_down] * 100
+
+        # Build hover text with news
+        down_hover_text = []
+        for date, ret in zip(down_dates, down_returns):
+            headline = news_headlines.get(date, None)
+            text = f"{date.strftime('%Y-%m-%d')}<br>Change: {ret:.1f}%"
+            if headline:
+                # Truncate long headlines
+                if len(headline) > 80:
+                    headline = headline[:77] + "..."
+                text += f"<br><br><b>News:</b> {headline}"
+            down_hover_text.append(text)
+
         down_trace = go.Scatter(
             x=down_dates,
             y=down_prices,
@@ -441,8 +604,8 @@ def create_plotly_candlestick(ticker: str, period: str = "6mo",
                 color="#F44336",
                 line=dict(color="white", width=1)
             ),
-            hovertemplate="%{x}<br>Change: %{customdata:.1f}%<extra></extra>",
-            customdata=down_returns
+            hovertemplate="%{text}<extra></extra>",
+            text=down_hover_text
         )
         if show_volume:
             fig.add_trace(down_trace, row=1, col=1)
@@ -534,11 +697,27 @@ def create_plotly_line(ticker: str, period: str = "1y",
     significant_up = daily_returns >= 0.05
     significant_down = daily_returns <= -0.05
 
+    # Batch fetch news for all significant dates
+    all_significant_dates = list(df.index[significant_up | significant_down])
+    news_headlines = get_news_for_dates(ticker, all_significant_dates) if all_significant_dates else {}
+
     # Markers for +5% days (green circles on the close price)
     if significant_up.any():
         up_dates = df.index[significant_up]
         up_prices = df.loc[significant_up, "Close"]
         up_returns = daily_returns[significant_up] * 100
+
+        # Build hover text with news
+        up_hover_text = []
+        for date, ret in zip(up_dates, up_returns):
+            headline = news_headlines.get(date, None)
+            text = f"{date.strftime('%Y-%m-%d')}<br>Change: +{ret:.1f}%"
+            if headline:
+                if len(headline) > 80:
+                    headline = headline[:77] + "..."
+                text += f"<br><br><b>News:</b> {headline}"
+            up_hover_text.append(text)
+
         fig.add_trace(go.Scatter(
             x=up_dates,
             y=up_prices,
@@ -550,8 +729,8 @@ def create_plotly_line(ticker: str, period: str = "1y",
                 color="#4CAF50",
                 line=dict(color="white", width=1)
             ),
-            hovertemplate="%{x}<br>Change: +%{customdata:.1f}%<extra></extra>",
-            customdata=up_returns
+            hovertemplate="%{text}<extra></extra>",
+            text=up_hover_text
         ))
 
     # Markers for -5% days (red circles on the close price)
@@ -559,6 +738,18 @@ def create_plotly_line(ticker: str, period: str = "1y",
         down_dates = df.index[significant_down]
         down_prices = df.loc[significant_down, "Close"]
         down_returns = daily_returns[significant_down] * 100
+
+        # Build hover text with news
+        down_hover_text = []
+        for date, ret in zip(down_dates, down_returns):
+            headline = news_headlines.get(date, None)
+            text = f"{date.strftime('%Y-%m-%d')}<br>Change: {ret:.1f}%"
+            if headline:
+                if len(headline) > 80:
+                    headline = headline[:77] + "..."
+                text += f"<br><br><b>News:</b> {headline}"
+            down_hover_text.append(text)
+
         fig.add_trace(go.Scatter(
             x=down_dates,
             y=down_prices,
@@ -570,8 +761,8 @@ def create_plotly_line(ticker: str, period: str = "1y",
                 color="#F44336",
                 line=dict(color="white", width=1)
             ),
-            hovertemplate="%{x}<br>Change: %{customdata:.1f}%<extra></extra>",
-            customdata=down_returns
+            hovertemplate="%{text}<extra></extra>",
+            text=down_hover_text
         ))
 
     fig.update_layout(

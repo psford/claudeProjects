@@ -28,6 +28,8 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | streamlit | 1.53.0 | Web dashboard framework |
 | plotly | 6.5.2 | Interactive charts |
 | streamlit-searchbox | 0.1.24 | Autocomplete search component |
+| finnhub-python | 2.4.26 | Stock news API |
+| python-dotenv | 1.2.1 | Environment variable management |
 
 ### Transitive Dependencies (via yfinance)
 

@@ -25,6 +25,8 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Added ticker search with autocomplete | Success |
 | - | Installed streamlit-searchbox | Success |
 | - | Added 5% daily move markers to charts | Success |
+| - | Integrated Finnhub news API for marker hover | Success |
+| - | Created .env for API key storage | Success |
 
 ---
 
