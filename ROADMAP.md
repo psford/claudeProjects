@@ -10,7 +10,8 @@ Planned features and improvements for the claudeProjects codebase.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Interactive charts (Plotly) | Add Plotly-based interactive charts with zoom, pan, hover data | Planned |
+| Interactive charts (Plotly) | Add Plotly-based interactive charts with zoom, pan, hover data | **Complete** |
+| Web dashboard (Streamlit) | Browser-based UI for stock analysis | **Complete** |
 | Technical indicators | RSI, MACD, Bollinger Bands, Stochastic Oscillator | Planned |
 
 ### Medium Priority
@@ -49,5 +50,6 @@ Planned features and improvements for the claudeProjects codebase.
 
 | Date | Change |
 |------|--------|
+| 01/14/2026 | Completed: Interactive charts (Plotly) and Web dashboard (Streamlit) |
 | 01/14/2026 | Initial roadmap created; added Plotly interactive charts to high priority |
 

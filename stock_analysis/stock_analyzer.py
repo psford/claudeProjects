@@ -6,6 +6,8 @@ A basic utility for fetching and analyzing stock data.
 import yfinance as yf
 import pandas as pd
 import mplfinance as mpf
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 
 
@@ -290,6 +292,174 @@ def list_chart_styles():
     for s in styles:
         print(f"  - {s}")
     return styles
+
+
+# =============================================================================
+# Plotly Interactive Charts (for web interface)
+# =============================================================================
+
+def create_plotly_candlestick(ticker: str, period: str = "6mo",
+                               show_volume: bool = True,
+                               moving_averages: list = None) -> go.Figure:
+    """
+    Create an interactive Plotly candlestick chart.
+
+    Args:
+        ticker: Stock symbol (e.g., 'AAPL')
+        period: Time period (1mo, 3mo, 6mo, 1y, 2y, 5y)
+        show_volume: Include volume subplot
+        moving_averages: List of MA windows to display (e.g., [20, 50, 200])
+
+    Returns:
+        Plotly Figure object
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        return None
+
+    # Create figure with secondary y-axis for volume
+    if show_volume:
+        fig = make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.03,
+            row_heights=[0.7, 0.3],
+            subplot_titles=(f"{ticker.upper()} - {period}", "Volume")
+        )
+    else:
+        fig = go.Figure()
+
+    # Add candlestick trace
+    candlestick = go.Candlestick(
+        x=df.index,
+        open=df["Open"],
+        high=df["High"],
+        low=df["Low"],
+        close=df["Close"],
+        name="OHLC",
+        increasing_line_color="#26a69a",
+        decreasing_line_color="#ef5350"
+    )
+
+    if show_volume:
+        fig.add_trace(candlestick, row=1, col=1)
+    else:
+        fig.add_trace(candlestick)
+
+    # Add moving averages
+    if moving_averages:
+        colors = ["#2196F3", "#FF9800", "#9C27B0", "#4CAF50"]
+        for i, window in enumerate(moving_averages):
+            if len(df) >= window:
+                ma = df["Close"].rolling(window=window).mean()
+                ma_trace = go.Scatter(
+                    x=df.index,
+                    y=ma,
+                    mode="lines",
+                    name=f"MA-{window}",
+                    line=dict(color=colors[i % len(colors)], width=1.5)
+                )
+                if show_volume:
+                    fig.add_trace(ma_trace, row=1, col=1)
+                else:
+                    fig.add_trace(ma_trace)
+
+    # Add volume bars
+    if show_volume:
+        colors = ["#ef5350" if df["Close"].iloc[i] < df["Open"].iloc[i]
+                  else "#26a69a" for i in range(len(df))]
+        fig.add_trace(
+            go.Bar(
+                x=df.index,
+                y=df["Volume"],
+                marker_color=colors,
+                name="Volume",
+                showlegend=False
+            ),
+            row=2, col=1
+        )
+
+    # Update layout
+    fig.update_layout(
+        title=f"{ticker.upper()} Stock Price",
+        yaxis_title="Price ($)",
+        xaxis_rangeslider_visible=False,
+        template="plotly_white",
+        height=600,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    if show_volume:
+        fig.update_yaxes(title_text="Price ($)", row=1, col=1)
+        fig.update_yaxes(title_text="Volume", row=2, col=1)
+
+    return fig
+
+
+def create_plotly_line(ticker: str, period: str = "1y",
+                        moving_averages: list = None) -> go.Figure:
+    """
+    Create an interactive Plotly line chart.
+
+    Args:
+        ticker: Stock symbol (e.g., 'AAPL')
+        period: Time period
+        moving_averages: List of MA windows to display
+
+    Returns:
+        Plotly Figure object
+    """
+    df = get_historical_data(ticker, period=period)
+    if df.empty:
+        return None
+
+    fig = go.Figure()
+
+    # Add closing price line
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["Close"],
+        mode="lines",
+        name="Close",
+        line=dict(color="#2196F3", width=2)
+    ))
+
+    # Add moving averages
+    if moving_averages:
+        colors = ["#FF9800", "#9C27B0", "#4CAF50", "#F44336"]
+        for i, window in enumerate(moving_averages):
+            if len(df) >= window:
+                ma = df["Close"].rolling(window=window).mean()
+                fig.add_trace(go.Scatter(
+                    x=df.index,
+                    y=ma,
+                    mode="lines",
+                    name=f"MA-{window}",
+                    line=dict(color=colors[i % len(colors)], width=1.5)
+                ))
+
+    fig.update_layout(
+        title=f"{ticker.upper()} - {period} Price History",
+        yaxis_title="Price ($)",
+        xaxis_title="Date",
+        template="plotly_white",
+        height=500,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    return fig
 
 
 if __name__ == "__main__":

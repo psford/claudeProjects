@@ -16,6 +16,11 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Created ROADMAP.md for future enhancements | Success |
 | - | Tested charts (AAPL candlestick, MSFT with MAs) | Success |
 | - | Updated dependencies.md | Success |
+| - | Committed changes | Success (35791f6) |
+| - | Installed streamlit and plotly | Success |
+| - | Added Plotly chart functions to stock_analyzer.py | Success |
+| - | Created Streamlit app (app.py) | Success |
+| - | Started Streamlit server | Success (localhost:8501) |
 
 ---
 

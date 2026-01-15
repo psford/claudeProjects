@@ -25,6 +25,8 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | yfinance | 1.0 | Stock market data retrieval |
 | pandas | 2.3.3 | Data manipulation and analysis |
 | mplfinance | 0.12.10b0 | Financial charting (candlestick, OHLC) |
+| streamlit | 1.53.0 | Web dashboard framework |
+| plotly | 6.5.2 | Interactive charts |
 
 ### Transitive Dependencies (via yfinance)
 
@@ -63,6 +65,20 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | contourpy | Contour plotting |
 | pyparsing | Parser library |
 
+### Transitive Dependencies (via streamlit)
+
+| Package | Purpose |
+|---------|---------|
+| tornado | Web server |
+| altair | Declarative visualization |
+| pyarrow | Data serialization |
+| pydeck | Map visualizations |
+| watchdog | File system monitoring |
+| blinker | Signal/event handling |
+| cachetools | Caching utilities |
+| tenacity | Retry logic |
+| toml | Config file parsing |
+
 ---
 
 ## Project Files
@@ -82,7 +98,8 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | File | Purpose | Dependencies |
 |------|---------|--------------|
-| stock_analysis/stock_analyzer.py | Stock analysis + charting | yfinance, pandas, mplfinance |
+| stock_analysis/stock_analyzer.py | Stock analysis + charting | yfinance, pandas, mplfinance, plotly |
+| stock_analysis/app.py | Streamlit web dashboard | streamlit, stock_analyzer |
 
 ---
 
@@ -98,5 +115,6 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/14/2026 | Added streamlit, plotly for web dashboard; added app.py |
 | 01/14/2026 | Added mplfinance for charting; added ROADMAP.md |
 | 01/13/2026 | Initial creation - documented yfinance, pandas, system tools |
