@@ -50,6 +50,9 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Installed Bandit SAST scanner (Task 1) | Success |
 | - | Created helpers/security_scan.py | Success |
 | - | Initial security scan: 0 medium/high issues | Success |
+| - | Added guideline #22 (context window efficiency) | Success |
+| - | Added guideline #23 (check web before asking) | Success |
+| - | Added guideline #24 (local helper code) | Success |
 
 ---
 
