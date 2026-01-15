@@ -49,7 +49,6 @@ claudeProjects/
 ├── dependencies.md          # Package and tool dependencies
 ├── ROADMAP.md               # Future enhancements roadmap
 ├── whileYouWereAway.md      # Task queue for rate-limited periods
-├── rules.md                 # Additional rules (pre-existing)
 ├── claude_01132026-*.md     # Versioned backups (7 from 01/13)
 ├── claude_01142026-*.md     # Versioned backups (4 from 01/14)
 ├── docs/
@@ -152,7 +151,7 @@ claudeProjects/
 3. [ ] **Guideline: Local helper code** - Write reusable tools, reduce API calls, `helpers/` folder, Unix modular style
 4. [ ] **C#/.NET fork** - Recreate entire project in C#/.NET, new folder structure, handle all testing
 5. [ ] **Remote communication** - Evaluate iMessage/SMS/email for remote collaboration, build app if needed
-6. [ ] **Remove rules.md** - Check if referenced anywhere, delete if not (no approval needed)
+6. [x] **Remove rules.md** - DONE (file was empty, deleted)
 7. [ ] **Dynamic analysis (DAST) suggestions** - Security tooling recommendations for SDLC
 8. [ ] **Guideline: "As a user" prompts** - Auto-add to functional requirements
 9. [ ] **User stories from roadmap** - Proper format, acceptance criteria, epics

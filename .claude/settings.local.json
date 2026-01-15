@@ -13,7 +13,25 @@
       "Bash(git commit:*)",
       "Bash(pip:*)",
       "Bash(python:*)",
-      "Bash(dir /b \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\")"
+      "Bash(dir /b \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" diff --stat)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" log --oneline -3)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add stock_analysis/stock_analyzer.py ROADMAP.md dependencies.md claudeLog.md .gitignore)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" commit -m \"$\\(cat <<''EOF''\nAdd mplfinance charting to stock analyzer\n\n- Add candlestick, OHLC, line charts with mplfinance\n- Add moving average overlay support\n- Add chart style selection \\(16 styles available\\)\n- Add save-to-file capability for all chart types\n- Create ROADMAP.md for future enhancements \\(Plotly, RSI, MACD, etc.\\)\n- Update dependencies.md with mplfinance and transitive deps\n- Update .gitignore to exclude __pycache__\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" diff stock_analysis/stock_analyzer.py)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add stock_analysis/stock_analyzer.py)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" commit -m \"$\\(cat <<''EOF''\nChange default chart style to tradingview\n\nUser preference: tradingview style over charles for cleaner look\nwith blue MA lines and cyan/red candlesticks.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add stock_analysis/app.py stock_analysis/stock_analyzer.py ROADMAP.md dependencies.md claudeLog.md)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" commit -m \"$\\(cat <<''EOF''\nAdd Streamlit web dashboard with interactive Plotly charts\n\n- Create app.py: Streamlit dashboard with ticker input, period selection,\n  chart type toggle \\(candlestick/line\\), and moving average controls\n- Add Plotly chart functions: create_plotly_candlestick\\(\\), create_plotly_line\\(\\)\n  for interactive browser-based charts with zoom, pan, hover\n- Display company info, price data, key metrics, and performance stats\n- Keep mplfinance functions for CLI/static image use\n- Update dependencies.md with streamlit \\(1.53.0\\), plotly \\(6.5.2\\)\n- Mark interactive charts as complete in ROADMAP.md\n\nRun with: streamlit run stock_analysis/app.py\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(copy \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\CLAUDE.md\" \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\claude_01142026-3.md\")",
+      "WebSearch",
+      "WebFetch(domain:stackoverflow.blog)",
+      "WebFetch(domain:www.businessanalyststoolkit.com)",
+      "WebFetch(domain:www.nuclino.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.streamlit.io)",
+      "Bash(curl:*)"
     ]
   }
 }
