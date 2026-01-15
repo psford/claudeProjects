@@ -55,7 +55,8 @@ with st.sidebar:
         ticker_search,
         key="ticker_searchbox",
         placeholder="Type company name or ticker...",
-        default="AAPL",
+        clear_on_submit=False,
+        rerun_on_update=True,
     )
 
     # Extract ticker from selection (None if cleared)
