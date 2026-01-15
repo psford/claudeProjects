@@ -143,11 +143,20 @@ claudeProjects/
 
 ## Pending Tasks
 
-### Immediate (from whileYouWereAway.md)
-- [x] Create technical specification - DONE
-- [x] Create functional specification - DONE
-- [x] Add no-regression guideline (#17) - DONE
-- [ ] **Wikipedia-style hover previews - NOT WORKING, NEEDS FIX**
+### Immediate - Wikipedia Hover (BLOCKED)
+- [ ] **Wikipedia-style hover previews on chart markers - NOT WORKING, NEEDS FIX**
+
+### New Tasks (from whileYouWereAway.md - added 01/14/2026)
+1. [ ] **Static analyzer (SAST)** - Find open-source solution, plan implementation, enforce pre-merge scanning
+2. [ ] **Guideline: Context window efficiency** - Hot/cold storage approach, only load needed data
+3. [ ] **Guideline: Local helper code** - Write reusable tools, reduce API calls, `helpers/` folder, Unix modular style
+4. [ ] **C#/.NET fork** - Recreate entire project in C#/.NET, new folder structure, handle all testing
+5. [ ] **Remote communication** - Evaluate iMessage/SMS/email for remote collaboration, build app if needed
+6. [ ] **Remove rules.md** - Check if referenced anywhere, delete if not (no approval needed)
+7. [ ] **Dynamic analysis (DAST) suggestions** - Security tooling recommendations for SDLC
+8. [ ] **Guideline: "As a user" prompts** - Auto-add to functional requirements
+9. [ ] **User stories from roadmap** - Proper format, acceptance criteria, epics
+10. [ ] **Log archiving script** - Archive logs >14 days when >1GB, run on startup/shutdown
 
 ### Future (from ROADMAP.md)
 - [ ] Technical indicators (RSI, MACD, Bollinger Bands)
