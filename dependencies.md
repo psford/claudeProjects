@@ -30,6 +30,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | streamlit-searchbox | 0.1.24 | Autocomplete search component |
 | finnhub-python | 2.4.26 | Stock news API |
 | python-dotenv | 1.2.1 | Environment variable management |
+| bandit | 1.9.2 | Static security analysis (SAST) |
 
 ### Transitive Dependencies (via yfinance)
 

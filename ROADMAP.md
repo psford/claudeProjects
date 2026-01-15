@@ -36,13 +36,22 @@ Planned features and improvements for the claudeProjects codebase.
 
 ## Infrastructure
 
-### Planned
+### Security
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Static Analysis (SAST) | Bandit security scanner for Python code | **Complete** |
+| Pre-commit hooks | Block commits with security issues | Planned |
+| Dynamic Analysis (DAST) | Runtime security testing | Planned |
+
+### DevOps
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | GitHub integration | Connect to remote repository | Blocked (auth issues) |
 | Unit tests | pytest test suite for stock_analyzer | Planned |
 | CI/CD pipeline | GitHub Actions for automated testing | Planned (needs GitHub) |
+| Log archiving | Auto-archive logs >14 days when >1GB | Planned |
 
 ---
 

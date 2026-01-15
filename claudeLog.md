@@ -47,6 +47,9 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 |------|--------|--------|
 | - | Restored session state ("hello!") | Success |
 | - | Deleted empty rules.md (Task 6) | Success |
+| - | Installed Bandit SAST scanner (Task 1) | Success |
+| - | Created helpers/security_scan.py | Success |
+| - | Initial security scan: 0 medium/high issues | Success |
 
 ---
 
