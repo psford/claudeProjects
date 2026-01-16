@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -161,11 +161,13 @@ The Stock Analyzer Dashboard allows users to:
 
 | ID | Requirement |
 |----|-------------|
-| FR-006.1 | The system must display the company's ticker symbol prominently |
-| FR-006.2 | The system must display the company's short name |
-| FR-006.3 | The system must display the stock exchange |
-| FR-006.4 | The system must display the currency |
-| FR-006.5 | The system must display the current price with day change |
+| FR-006.1 | The system must display the company's full name as the title |
+| FR-006.2 | The system must display the stock exchange and currency |
+| FR-006.3 | The system must display the sector when available |
+| FR-006.4 | The system must display security identifiers (Ticker, ISIN, CUSIP, SEDOL) when available |
+| FR-006.5 | The system must display a company description/bio when available |
+| FR-006.6 | The system must truncate long descriptions at sentence boundaries |
+| FR-006.7 | The system must display the current price with day change |
 
 ### 3.7 Key Metrics (FR-007)
 

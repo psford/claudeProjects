@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.3
+**Version:** 1.4
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -39,6 +39,10 @@ This specification covers:
 | ONNX | Open Neural Network Exchange - portable ML model format |
 | YOLOv8 | You Only Look Once v8 - object detection model |
 | COCO | Common Objects in Context - ML dataset with 80 object classes |
+| ISIN | International Securities Identification Number (12-char global identifier) |
+| CUSIP | Committee on Uniform Securities Identification Procedures (9-char US/Canada) |
+| SEDOL | Stock Exchange Daily Official List (7-char UK/Ireland identifier) |
+| OpenFIGI | Bloomberg's free identifier mapping API |
 
 ---
 
@@ -85,9 +89,19 @@ This specification covers:
 │   FinanceAPI (NuGet)       │    │                                    │
 │                             │    │                                    │
 │  - GetSummaryDetailsAsync  │    │  - Company news                    │
+│  - GetAssetProfileAsync    │    │  - Company profile (ISIN, CUSIP)   │
 │  - GetHistoricalDataAsync  │    │  - News images                     │
 │  - GetTopTrendingStocks    │    │  - Article URLs                    │
 │                             │    │                                    │
+└────────────────────────────┘    └────────────────────────────────────┘
+         │                                        │
+         ▼                                        ▼
+┌────────────────────────────┐    ┌────────────────────────────────────┐
+│  Yahoo Finance Search API  │    │       OpenFIGI REST API            │
+│  (Direct HTTP Client)      │    │       (Bloomberg)                   │
+│                             │    │                                    │
+│  - Ticker search by name   │    │  - SEDOL lookup from ISIN          │
+│  - Company name lookup     │    │  - Identifier mapping              │
 └────────────────────────────┘    └────────────────────────────────────┘
          │
          ▼
@@ -173,7 +187,19 @@ This specification covers:
 ```json
 {
   "symbol": "AAPL",
-  "shortName": "Apple Inc.",
+  "shortName": "Apple Inc",
+  "longName": "Apple Inc",
+  "sector": "Technology",
+  "industry": "Technology",
+  "website": "https://www.apple.com/",
+  "country": "US",
+  "currency": "USD",
+  "exchange": "NASDAQ NMS - GLOBAL MARKET",
+  "isin": null,
+  "cusip": null,
+  "sedol": null,
+  "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide...",
+  "fullTimeEmployees": 164000,
   "currentPrice": 198.50,
   "previousClose": 197.25,
   "dayHigh": 199.00,
@@ -185,6 +211,8 @@ This specification covers:
   "fiftyTwoWeekLow": 164.08
 }
 ```
+
+**Note:** ISIN/CUSIP/SEDOL availability depends on data source (Finnhub free tier may not include all identifiers).
 
 **GET /api/search?q=apple**
 ```json
@@ -237,8 +265,19 @@ public record StockInfo
     public string? LongName { get; init; }
     public string? Sector { get; init; }
     public string? Industry { get; init; }
+    public string? Website { get; init; }
+    public string? Country { get; init; }
     public string? Currency { get; init; }
     public string? Exchange { get; init; }
+
+    // Security identifiers
+    public string? Isin { get; init; }
+    public string? Cusip { get; init; }
+    public string? Sedol { get; init; }
+
+    // Company profile
+    public string? Description { get; init; }
+    public int? FullTimeEmployees { get; init; }
 
     public decimal? CurrentPrice { get; init; }
     public decimal? PreviousClose { get; init; }
@@ -299,6 +338,30 @@ public record SignificantMove
 }
 ```
 
+### 4.5 CompanyProfile
+
+```csharp
+public record CompanyProfile
+{
+    public required string Symbol { get; init; }
+    public string? Name { get; init; }
+    public string? Country { get; init; }
+    public string? Currency { get; init; }
+    public string? Exchange { get; init; }
+    public string? Industry { get; init; }
+    public string? WebUrl { get; init; }
+    public string? Logo { get; init; }
+    public string? IpoDate { get; init; }
+    public decimal? MarketCapitalization { get; init; }
+    public decimal? ShareOutstanding { get; init; }
+
+    // Security identifiers
+    public string? Isin { get; init; }
+    public string? Cusip { get; init; }
+    public string? Sedol { get; init; }
+}
+```
+
 ---
 
 ## 5. Services
@@ -309,10 +372,15 @@ public record SignificantMove
 
 | Method | Description |
 |--------|-------------|
-| `GetStockInfoAsync(symbol)` | Fetch stock info via OoplesFinance |
+| `GetStockInfoAsync(symbol)` | Fetch stock info + asset profile via OoplesFinance |
 | `GetHistoricalDataAsync(symbol, period)` | Fetch OHLCV history |
 | `SearchAsync(query)` | Search tickers via Yahoo Finance API |
 | `GetTrendingStocksAsync(count)` | Get trending stocks |
+
+**Stock Info Implementation:**
+Fetches both summary details and asset profile from Yahoo Finance:
+- `GetSummaryDetailsAsync(symbol)` - Price data, ratios, metrics
+- `GetAssetProfileAsync(symbol)` - Company description, sector, industry, employees
 
 **Search Implementation:**
 Uses direct HTTP call to Yahoo Finance Search API since OoplesFinance doesn't provide search:
@@ -327,12 +395,26 @@ https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=8&newsC
 | Method | Description |
 |--------|-------------|
 | `GetCompanyNewsAsync(symbol, fromDate)` | Fetch news from Finnhub |
+| `GetCompanyProfileAsync(symbol)` | Fetch company profile with identifiers from Finnhub |
+| `GetSedolFromIsinAsync(isin)` | Look up SEDOL via OpenFIGI API |
 
-**Finnhub Endpoint:**
+**Finnhub News Endpoint:**
 ```
-GET https://finnhub.io/api/v1/company-news?symbol={symbol}&from={date}&to={date}
-Header: X-Finnhub-Token: {api_key}
+GET https://finnhub.io/api/v1/company-news?symbol={symbol}&from={date}&to={date}&token={api_key}
 ```
+
+**Finnhub Profile Endpoint:**
+```
+GET https://finnhub.io/api/v1/stock/profile2?symbol={symbol}&token={api_key}
+```
+Returns: name, country, currency, exchange, industry, weburl, logo, isin, cusip
+
+**OpenFIGI Endpoint:**
+```
+POST https://api.openfigi.com/v3/mapping
+Body: [{"idType": "ID_ISIN", "idValue": "{isin}"}]
+```
+Used to look up SEDOL for UK/Irish securities from ISIN.
 
 ### 5.3 AnalysisService
 
@@ -683,6 +765,7 @@ stock_analyzer_dotnet/
 │       ├── StockAnalyzer.Core.csproj
 │       ├── Models/
 │       │   ├── StockInfo.cs
+│       │   ├── CompanyProfile.cs
 │       │   ├── HistoricalData.cs
 │       │   ├── NewsItem.cs
 │       │   ├── SearchResult.cs
@@ -894,6 +977,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-01-16 | Company profile integration: ISIN/CUSIP/SEDOL identifiers, company bio, Finnhub profile endpoint, OpenFIGI SEDOL lookup, chart legend/width fixes |
 | 1.3 | 2026-01-16 | Server-side ML image processing with YOLOv8n ONNX, ImageProcessingService, ImageCacheService, new /api/images/* endpoints |
 | 1.2 | 2026-01-16 | Added unit test documentation (Section 8), SRI for Plotly.js (Section 12.5) |
 | 1.1 | 2026-01-16 | Added image caching system, Dog CEO API, CSP configuration |
@@ -910,3 +994,4 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 - [Finnhub API Documentation](https://finnhub.io/docs/api)
 - [Dog CEO API Documentation](https://dog.ceo/dog-api/documentation/)
 - [Cat as a Service (cataas)](https://cataas.com/)
+- [OpenFIGI API Documentation](https://www.openfigi.com/api)
