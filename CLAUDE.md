@@ -58,6 +58,7 @@ My background is a longtime financial services business analyst, who has program
     - **Headroom:** Reserve ~5,000-6,000 tokens for graceful exit (state save, commit, log update)
     - **Warning signs:** Tool output truncation, summarization occurring, very long conversation
     - **Graceful exit protocol:** Warn user, complete current atomic task, save checkpoint, commit, update log
+31. Document scan/audit findings: When running security scans (SAST, DAST) or other audits, add findings to ROADMAP.md. Include issue description, severity, and recommended fix. This ensures nothing is forgotten and provides a clear remediation backlog.
 
 # known issues
 
