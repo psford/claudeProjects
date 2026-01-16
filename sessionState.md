@@ -23,7 +23,6 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ### GitHub
 - **Status:** NOT CONNECTED
 - **Issue:** Windows credential manager had memory errors; token auth also failed
-- **Next steps:** When needed, try `gh auth login` again or use SSH keys
 
 ### Python
 - **Version:** 3.10.11
@@ -34,72 +33,65 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 - **Project:** stock_analyzer_dotnet (ASP.NET Core minimal API + Tailwind CSS frontend)
 
 ### Slack Integration
-- **Status:** OPERATIONAL
+- **Status:** OPERATIONAL (reaction-only acknowledgment)
 - **Workspace:** psforddigitaldesign.slack.com
 - **Channel:** #claude-notifications
+- **Bot scopes:** chat:write, channels:history, reactions:write, app_mentions:read
 - **Send:** `python stock_analysis/helpers/slack_notify.py "message"`
-- **Receive:** `python stock_analysis/helpers/slack_listener.py` (background process)
+- **Listener:** `python stock_analysis/helpers/slack_listener.py --daemon`
 - **Check inbox:** `python stock_analysis/helpers/slack_listener.py --check`
+- **Sync history:** `python stock_analysis/helpers/slack_listener.py --sync`
 
 ---
 
 ## Project Structure
 
 ```
-claudeProjects/                      # Workspace root (shared across projects)
-├── .git/                            # Local git repository
-├── .gitignore                       # Excludes tokens, .env, credentials, logs
-├── CLAUDE.md                        # Guidelines and known issues (38 guidelines)
+claudeProjects/
+├── CLAUDE.md                        # Guidelines (40) + Deployment rules (D1-D5)
 ├── claudeLog.md                     # Terminal action log
 ├── sessionState.md                  # This file
-├── whileYouWereAway.md              # Task queue for rate-limited periods
+├── whileYouWereAway.md              # Task queue
 ├── claude_01*.md                    # Versioned CLAUDE.md backups
 │
 ├── stock_analysis/                  # Python Stock Analysis Project
-│   ├── .env                         # API keys (FINNHUB, SLACK tokens) - gitignored
-│   ├── stock_analyzer.py            # Core analysis + charting + news functions
-│   ├── app.py                       # Streamlit web dashboard
-│   ├── dependencies.md              # Package and tool dependencies
-│   ├── ROADMAP.md                   # Future enhancements roadmap
-│   ├── docs/
-│   │   ├── TECHNICAL_SPEC.md        # System architecture, APIs, troubleshooting
-│   │   └── FUNCTIONAL_SPEC.md       # Business requirements, data mappings
+│   ├── .env                         # API keys (gitignored)
+│   ├── stock_analyzer.py
+│   ├── app.py                       # Streamlit dashboard
+│   ├── ROADMAP.md
 │   ├── helpers/
-│   │   ├── security_scan.py         # SAST scanner wrapper (Bandit)
-│   │   ├── zap_scan.py              # DAST scanner wrapper (OWASP ZAP)
-│   │   ├── slack_notify.py          # Send Slack notifications
-│   │   ├── slack_listener.py        # Receive Slack messages (Socket Mode)
-│   │   └── checkpoint.py            # Session state checkpointing
-│   └── security_reports/            # ZAP scan HTML/JSON reports
+│   │   ├── slack_notify.py          # Send Slack messages
+│   │   ├── slack_listener.py        # Receive messages (reaction-only ack)
+│   │   ├── security_scan.py         # SAST (Bandit)
+│   │   ├── zap_scan.py              # DAST (ZAP)
+│   │   └── checkpoint.py
+│   └── security_reports/
 │
 └── stock_analyzer_dotnet/           # .NET Stock Analysis Project
-    ├── src/
-    │   ├── StockAnalyzer.Api/       # ASP.NET Core minimal API
-    │   │   ├── wwwroot/             # Static files (HTML, CSS, JS)
-    │   │   │   ├── index.html       # Main dashboard page
-    │   │   │   └── js/
-    │   │   │       ├── app.js       # Main application logic
-    │   │   │       ├── api.js       # API client
-    │   │   │       └── charts.js    # Plotly chart rendering
-    │   │   └── appsettings.Development.json  # API keys (gitignored)
-    │   └── StockAnalyzer.Core/      # Core business logic
-    │       ├── Models/              # Data models
-    │       └── Services/            # Stock data, news, analysis services
-    └── docs/
-        ├── TECHNICAL_SPEC.md        # .NET-specific architecture
-        └── FUNCTIONAL_SPEC.md       # .NET-specific requirements
+    ├── src/StockAnalyzer.Api/
+    │   ├── wwwroot/js/app.js        # Hover popups with cat images
+    │   └── appsettings.Development.json  # API keys (gitignored)
+    └── src/StockAnalyzer.Core/
 ```
 
 ---
 
-## Active Guidelines (from CLAUDE.md)
+## Guidelines Summary
 
-Key guidelines (38 total, see CLAUDE.md for all):
-- **#15** Test before completion - Verify UI in browser, not just code analysis
-- **#22** Context window efficiency - Hot/cold storage, BUT rules files are sacrosanct
-- **#34** Building ≠ Running - Verify service is running before claiming it's available
-- **#37** Proactive guideline updates - Add user feedback to CLAUDE.md when beneficial
-- **#38** Test external services - Verify APIs/services work BEFORE integrating
+**Total:** 40 general guidelines + 5 deployment rules
+
+**Key guidelines:**
+- **#15** Test before completion
+- **#22** Context efficiency (rules files are sacrosanct)
+- **#37** Proactive guideline updates from feedback
+- **#38** Test external services before integrating
+
+**Deployment rules (new section):**
+- **D1** Kill before deploy - terminate old processes first
+- **D2** Redeploy after committing
+- **D3** Building ≠ Running
+- **D4** Test end-to-end after deployment
+- **D5** Deployment checklist
 
 ---
 
@@ -109,48 +101,55 @@ Key guidelines (38 total, see CLAUDE.md for all):
 - ✅ Interactive Plotly charts (candlestick, line)
 - ✅ Moving average overlays (20, 50, 200-day)
 - ✅ Ticker search with autocomplete
-- ✅ Significant move markers (triangles on chart)
-- ✅ Wikipedia-style hover popups with news details
+- ✅ Significant move markers (triangles)
+- ✅ Wikipedia-style hover popups with cat images (cataas.com)
 - ✅ Configurable threshold slider (3-10%)
-- ✅ Cat images in popups (cataas.com)
-- ✅ Security headers (CSP, etc.)
-- ✅ SAST (SecurityCodeScan) - 0 warnings
-- ✅ DAST (ZAP) - 114 passed, 0 failures
+- ✅ Security scans passed (SAST: 0, DAST: 114 passed)
 
 ---
 
-## Pending Tasks (from ROADMAP.md)
+## Pending Tasks (ROADMAP.md)
 
 | Task | Description | Status |
 |------|-------------|--------|
 | Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnails | Planned |
-| Hosting research | Identify free/cheap options to host online | Planned |
+| Image recognition | Ensure cat/dog faces are visible in thumbnails | Planned |
+| Hosting research | Identify free/cheap hosting options | Planned |
 | SRI for CDN scripts | Subresource Integrity hashes | Planned |
 | Unit tests | xUnit test suite | Planned |
 
 ---
 
-## Git History (Recent - 01/16/2026)
+## Today's Session (01/16/2026)
 
-| Hash | Description |
-|------|-------------|
-| b74e670 | Add guideline #38: Test external services before integrating |
-| 2f5bba1 | Fix kitten images - switch to cataas.com |
-| 3061e37 | Replace news thumbnails with kittens, add guidelines |
-| 449d5b5 | Fix hover detection and popup race condition |
-| 1969ca6 | Complete Wikipedia-style hover popups for significant moves |
-| a161054 | Fix ticker search to support company name autocomplete |
+**Slack improvements:**
+- Added history sync (`--sync` flag) to catch missed messages
+- Changed from reply acknowledgment to ✅ reaction only
+- Fixed multiple listener issue (old code was handling messages)
+
+**New guidelines:**
+- #39: Slack reaction confirmation
+- #40: Review security tools on new frameworks
+
+**New deployment section:**
+- D1-D5 deployment rules added
+- Moved #28 and #34 into deployment section
+
+**Commits today:**
+- b5bda78 - Add deployment section to CLAUDE.md
+- d03f7f0 - Replace Slack reply with reaction acknowledgment
+- a113d28 - Add guidelines #39-40 from Slack history
+- 54fa5ad - Add history sync to Slack listener
 
 ---
 
 ## Quick Start for New Session
 
-**Say "hello!"** to restore context automatically.
+**Say "hello!"** to restore context.
 
 Then:
-1. Read CLAUDE.md (sacrosanct rules)
-2. Check `whileYouWereAway.md` for tasks
-3. Check Slack inbox: `python stock_analysis/helpers/slack_listener.py --check`
+1. Check Slack: `python stock_analysis/helpers/slack_listener.py --sync`
+2. Check tasks: `whileYouWereAway.md`
 
 To run .NET app:
 ```
