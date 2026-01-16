@@ -79,7 +79,11 @@ My background is a longtime financial services business analyst, who has program
     - This applies to: CDNs, placeholder image services, APIs, webhooks, any external dependency
 39. Slack message confirmation: When completing a task received via Slack, add a ✅ reaction to the original message to confirm completion. This provides visual feedback in the Slack channel.
 40. Review security tools on new frameworks: Any time a new framework or language is introduced, review SAST and DAST tools to ensure adequate coverage. Add new scanners if needed (e.g., SecurityCodeScan for C#, Bandit for Python).
-41. Keep specs updated: When adding or modifying features, update FUNCTIONAL_SPEC.md (user-facing requirements) and TECHNICAL_SPEC.md (architecture, APIs, implementation details) along with ROADMAP.md and claudeLog.md.
+41. Keep specs updated — SAME COMMIT RULE: Spec updates MUST be included in the same commit as code changes, never as a follow-up commit.
+    - **TECHNICAL_SPEC.md — ALWAYS update** for any code changes: new files, new dependencies, architecture changes, configuration changes, test additions, security updates, etc. This is the technical reference.
+    - **FUNCTIONAL_SPEC.md — Update ONLY when user-facing behavior changes:** new features, UI changes, workflow changes, or requirement modifications. Internal refactoring, tests, and infrastructure don't require functional spec updates.
+    - **Before running `git commit`:** Stage spec files alongside code files. If you're about to commit code without spec updates, STOP and update the specs first.
+    - **Violation of this rule has happened repeatedly.** Do not commit code changes without the corresponding spec updates in the same commit.
 
 # deployment
 
