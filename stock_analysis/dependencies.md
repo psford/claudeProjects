@@ -128,6 +128,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | Package | Version | Purpose | License |
 |---------|---------|---------|---------|
 | OoplesFinance.YahooFinanceAPI | 1.7.1 | Yahoo Finance data | MIT |
+| SecurityCodeScan.VS2019 | 5.6.7 | SAST security scanner for C# | LGPL-3.0 |
 | Microsoft.Extensions.Http | (transitive) | HTTP client factory | MIT |
 | Newtonsoft.Json | (transitive) | JSON serialization | MIT |
 
@@ -160,6 +161,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/16/2026 | Added SecurityCodeScan.VS2019 for C#/.NET SAST security scanning |
 | 01/15/2026 | Added C#/.NET 8 version with OoplesFinance, Tailwind CSS, Plotly.js |
 | 01/15/2026 | Added Docker Desktop, OWASP ZAP for DAST scanning |
 | 01/15/2026 | Added slack-bolt for Socket Mode listener; documented helper scripts |
