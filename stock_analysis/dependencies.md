@@ -13,6 +13,8 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | Git | - | Configured | Local repo only |
 | GitHub CLI (gh) | - | Installed | Not authenticated |
 | Chocolatey | 2.0.0 | Installed | Windows package manager |
+| Docker Desktop | 29.1.3 | Installed | Container runtime |
+| OWASP ZAP | stable | Docker image | DAST security scanner |
 
 ---
 
@@ -109,6 +111,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 | helpers/slack_notify.py | Slack notification sender | slack-sdk, python-dotenv |
 | helpers/slack_listener.py | Slack message receiver (background) | slack-bolt, python-dotenv |
 | helpers/security_scan.py | SAST security scanner wrapper | bandit |
+| helpers/zap_scan.py | DAST security scanner wrapper | Docker, OWASP ZAP |
 
 ---
 
@@ -124,6 +127,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/15/2026 | Added Docker Desktop, OWASP ZAP for DAST scanning |
 | 01/15/2026 | Added slack-bolt for Socket Mode listener; documented helper scripts |
 | 01/14/2026 | Added streamlit, plotly for web dashboard; added app.py |
 | 01/14/2026 | Added mplfinance for charting; added ROADMAP.md |
