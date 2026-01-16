@@ -74,8 +74,8 @@ def main():
     parser.add_argument(
         "path",
         nargs="?",
-        default="stock_analysis/",
-        help="Directory or file to scan (default: stock_analysis/)"
+        default=".",
+        help="Directory or file to scan (default: current directory)"
     )
     parser.add_argument(
         "--strict",

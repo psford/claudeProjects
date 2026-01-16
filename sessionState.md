@@ -38,36 +38,37 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 - **Status:** OPERATIONAL
 - **Workspace:** psforddigitaldesign.slack.com
 - **Channel:** #claude-notifications
-- **Send:** `python helpers/slack_notify.py "message"`
-- **Receive:** `python helpers/slack_listener.py` (background process)
-- **Check inbox:** `python helpers/slack_listener.py --check`
+- **Send:** `python stock_analysis/helpers/slack_notify.py "message"`
+- **Receive:** `python stock_analysis/helpers/slack_listener.py` (background process)
+- **Check inbox:** `python stock_analysis/helpers/slack_listener.py --check`
 
 ---
 
 ## Project Structure
 
 ```
-claudeProjects/
-├── .git/                    # Local git repository
-├── .gitignore               # Excludes tokens, .env, credentials, logs
-├── .env                     # API keys (FINNHUB, SLACK tokens) - gitignored
-├── CLAUDE.md                # Guidelines and known issues (24 guidelines)
-├── claudeLog.md             # Terminal action log
-├── sessionState.md          # This file
-├── dependencies.md          # Package and tool dependencies
-├── ROADMAP.md               # Future enhancements roadmap
-├── whileYouWereAway.md      # Task queue for rate-limited periods
-├── claude_01*.md            # Versioned CLAUDE.md backups
-├── docs/
-│   ├── TECHNICAL_SPEC.md    # System architecture, APIs, troubleshooting
-│   └── FUNCTIONAL_SPEC.md   # Business requirements, data mappings
-├── helpers/
-│   ├── security_scan.py     # SAST scanner wrapper (Bandit)
-│   ├── slack_notify.py      # Send Slack notifications
-│   └── slack_listener.py    # Receive Slack messages (Socket Mode)
-└── stock_analysis/
-    ├── stock_analyzer.py    # Core analysis + charting + news functions
-    └── app.py               # Streamlit web dashboard
+claudeProjects/                      # Workspace root (shared across projects)
+├── .git/                            # Local git repository
+├── .gitignore                       # Excludes tokens, .env, credentials, logs
+├── CLAUDE.md                        # Guidelines and known issues (24 guidelines)
+├── claudeLog.md                     # Terminal action log
+├── sessionState.md                  # This file
+├── whileYouWereAway.md              # Task queue for rate-limited periods
+├── claude_01*.md                    # Versioned CLAUDE.md backups
+│
+└── stock_analysis/                  # Stock Analysis Project
+    ├── .env                         # API keys (FINNHUB, SLACK tokens) - gitignored
+    ├── stock_analyzer.py            # Core analysis + charting + news functions
+    ├── app.py                       # Streamlit web dashboard
+    ├── dependencies.md              # Package and tool dependencies
+    ├── ROADMAP.md                   # Future enhancements roadmap
+    ├── docs/
+    │   ├── TECHNICAL_SPEC.md        # System architecture, APIs, troubleshooting
+    │   └── FUNCTIONAL_SPEC.md       # Business requirements, data mappings
+    └── helpers/
+        ├── security_scan.py         # SAST scanner wrapper (Bandit)
+        ├── slack_notify.py          # Send Slack notifications
+        └── slack_listener.py        # Receive Slack messages (Socket Mode)
 ```
 
 ---
@@ -169,7 +170,7 @@ claudeProjects/
 
 Then:
 1. Check if Streamlit server is running: `curl http://localhost:8501`
-2. If not, start it: `streamlit run stock_analysis/app.py`
+2. If not, start it: `cd stock_analysis && streamlit run app.py`
 3. Check `whileYouWereAway.md` for tasks
 4. Continue with Task 6 (DAST suggestions)
 

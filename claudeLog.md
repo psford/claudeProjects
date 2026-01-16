@@ -59,6 +59,8 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Installed slack-bolt for Socket Mode | Success (v1.27.0) |
 | - | Created helpers/slack_listener.py | Success |
 | - | Started Slack listener in background | Success (connected) |
+| - | Reorganized folder structure | Success |
+| - | Moved helpers/, docs/, ROADMAP.md, dependencies.md, .env into stock_analysis/ | Success |
 
 ---
 
