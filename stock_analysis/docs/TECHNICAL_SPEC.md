@@ -600,7 +600,7 @@ A parallel implementation of the Stock Analyzer using modern C#/.NET 8 with a cu
 | `/api/stock/{ticker}/news?days=` | GET | Company news |
 | `/api/stock/{ticker}/significant?threshold=` | GET | Significant moves |
 | `/api/stock/{ticker}/analysis?period=` | GET | Performance metrics + MAs |
-| `/api/search?q=` | GET | Ticker search/validation |
+| `/api/search?q=` | GET | Ticker search by symbol or company name |
 | `/api/trending?count=` | GET | Trending stocks |
 | `/api/health` | GET | Health check |
 

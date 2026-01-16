@@ -511,7 +511,7 @@ The Stock Analyzer has a parallel C#/.NET 8 implementation with a modern HTML/CS
 |---------|----------------|--------------|
 | Stock info retrieval | Yes | Yes |
 | Historical OHLC data | Yes | Yes |
-| Ticker search | Yes | Yes (validation) |
+| Ticker search by company name | Yes | Yes |
 | Interactive Plotly charts | Yes | Yes |
 | Moving averages (20/50/200) | Yes | Yes |
 | Significant move detection | Yes | Yes |

@@ -7,6 +7,7 @@ const App = {
     currentPeriod: '1y',
     historyData: null,
     analysisData: null,
+    searchTimeout: null,
 
     /**
      * Initialize the application
@@ -20,12 +21,44 @@ const App = {
      * Bind UI event handlers
      */
     bindEvents() {
+        const tickerInput = document.getElementById('ticker-input');
+        const searchResults = document.getElementById('search-results');
+
         // Search button
         document.getElementById('search-btn').addEventListener('click', () => this.analyzeStock());
 
+        // Autocomplete on input
+        tickerInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (this.searchTimeout) clearTimeout(this.searchTimeout);
+
+            if (query.length < 2) {
+                this.hideSearchResults();
+                return;
+            }
+
+            // Debounce search
+            this.searchTimeout = setTimeout(() => this.performSearch(query), 300);
+        });
+
         // Enter key in ticker input
-        document.getElementById('ticker-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.analyzeStock();
+        tickerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.hideSearchResults();
+                this.analyzeStock();
+            }
+        });
+
+        // Hide results on blur (with delay to allow click)
+        tickerInput.addEventListener('blur', () => {
+            setTimeout(() => this.hideSearchResults(), 200);
+        });
+
+        // Show results on focus if there's a query
+        tickerInput.addEventListener('focus', (e) => {
+            if (e.target.value.trim().length >= 2) {
+                this.performSearch(e.target.value.trim());
+            }
         });
 
         // Period change
@@ -41,6 +74,65 @@ const App = {
         ['ma-20', 'ma-50', 'ma-200'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => this.updateChart());
         });
+    },
+
+    /**
+     * Perform search for autocomplete
+     */
+    async performSearch(query) {
+        const loader = document.getElementById('search-loader');
+        loader.classList.remove('hidden');
+
+        try {
+            const data = await API.search(query);
+            this.showSearchResults(data.results);
+        } catch (error) {
+            console.error('Search failed:', error);
+            this.hideSearchResults();
+        } finally {
+            loader.classList.add('hidden');
+        }
+    },
+
+    /**
+     * Show search results dropdown
+     */
+    showSearchResults(results) {
+        const container = document.getElementById('search-results');
+
+        if (!results || results.length === 0) {
+            container.innerHTML = '<div class="px-4 py-3 text-gray-500 text-sm">No results found</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        container.innerHTML = results.map(r => `
+            <div class="search-result px-4 py-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
+                 data-symbol="${r.symbol}">
+                <div class="font-medium text-gray-900">${r.symbol}</div>
+                <div class="text-sm text-gray-600">${r.shortName || r.longName || ''}</div>
+                <div class="text-xs text-gray-400">${r.exchange || ''} ${r.type ? `• ${r.type}` : ''}</div>
+            </div>
+        `).join('');
+
+        // Add click handlers to results
+        container.querySelectorAll('.search-result').forEach(el => {
+            el.addEventListener('click', () => {
+                const symbol = el.dataset.symbol;
+                document.getElementById('ticker-input').value = symbol;
+                this.hideSearchResults();
+                this.analyzeStock();
+            });
+        });
+
+        container.classList.remove('hidden');
+    },
+
+    /**
+     * Hide search results dropdown
+     */
+    hideSearchResults() {
+        document.getElementById('search-results').classList.add('hidden');
     },
 
     /**

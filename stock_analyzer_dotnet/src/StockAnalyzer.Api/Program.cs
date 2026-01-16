@@ -143,7 +143,7 @@ app.MapGet("/api/stock/{ticker}/analysis", async (
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
-// GET /api/search - Search for tickers
+// GET /api/search - Search for tickers by symbol or company name
 app.MapGet("/api/search", async (string q, StockDataService stockService) =>
 {
     if (string.IsNullOrWhiteSpace(q))
@@ -153,7 +153,15 @@ app.MapGet("/api/search", async (string q, StockDataService stockService) =>
     return Results.Ok(new
     {
         query = q,
-        results = results.Select(r => new { symbol = r.Symbol, name = r.Name })
+        results = results.Select(r => new
+        {
+            symbol = r.Symbol,
+            shortName = r.ShortName,
+            longName = r.LongName,
+            exchange = r.Exchange,
+            type = r.Type,
+            displayName = r.DisplayName
+        })
     });
 })
 .WithName("SearchTickers")

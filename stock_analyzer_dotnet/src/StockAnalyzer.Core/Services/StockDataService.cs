@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using OoplesFinance.YahooFinanceAPI;
 using OoplesFinance.YahooFinanceAPI.Enums;
 using StockAnalyzer.Core.Models;
@@ -132,29 +134,68 @@ public class StockDataService
     }
 
     /// <summary>
-    /// Search for tickers - validates if a symbol exists.
+    /// Search for tickers by symbol or company name using Yahoo Finance search API.
     /// </summary>
-    public async Task<List<(string Symbol, string Name)>> SearchAsync(string query)
+    public async Task<List<SearchResult>> SearchAsync(string query)
     {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            return new List<SearchResult>();
+
         try
         {
-            var yahooClient = new YahooClient();
-            var summary = await yahooClient.GetSummaryDetailsAsync(query.ToUpper());
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 
-            if (summary != null)
-            {
-                return new List<(string, string)>
+            var url = $"https://query2.finance.yahoo.com/v1/finance/search?q={Uri.EscapeDataString(query)}&quotesCount=8&newsCount=0";
+            var response = await httpClient.GetFromJsonAsync<YahooSearchResponse>(url);
+
+            if (response?.Quotes == null)
+                return new List<SearchResult>();
+
+            return response.Quotes
+                .Where(q => !string.IsNullOrEmpty(q.Symbol))
+                .Take(8)
+                .Select(q => new SearchResult
                 {
-                    (query.ToUpper(), query.ToUpper())
-                };
-            }
-
-            return new List<(string, string)>();
+                    Symbol = q.Symbol ?? "",
+                    ShortName = q.ShortName ?? q.LongName ?? q.Symbol ?? "",
+                    LongName = q.LongName,
+                    Exchange = q.Exchange,
+                    Type = q.QuoteType
+                })
+                .ToList();
         }
         catch (Exception)
         {
-            return new List<(string, string)>();
+            return new List<SearchResult>();
         }
+    }
+
+    /// <summary>
+    /// Yahoo Finance search API response model.
+    /// </summary>
+    private class YahooSearchResponse
+    {
+        [JsonPropertyName("quotes")]
+        public List<YahooSearchQuote>? Quotes { get; set; }
+    }
+
+    private class YahooSearchQuote
+    {
+        [JsonPropertyName("symbol")]
+        public string? Symbol { get; set; }
+
+        [JsonPropertyName("shortname")]
+        public string? ShortName { get; set; }
+
+        [JsonPropertyName("longname")]
+        public string? LongName { get; set; }
+
+        [JsonPropertyName("exchange")]
+        public string? Exchange { get; set; }
+
+        [JsonPropertyName("quoteType")]
+        public string? QuoteType { get; set; }
     }
 
     /// <summary>
