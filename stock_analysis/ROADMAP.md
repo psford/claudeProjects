@@ -70,10 +70,36 @@ Production deployment should address these warnings. Low priority for local deve
 
 ---
 
+## .NET Version (stock_analyzer_dotnet)
+
+### Completed
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| REST API | ASP.NET Core minimal API endpoints | **Complete** |
+| Plotly.js charts | Interactive candlestick/line charts | **Complete** |
+| Ticker search | Autocomplete with Yahoo Finance API | **Complete** |
+| Security headers | CSP, X-Frame-Options, etc. (ZAP scan) | **Complete** |
+| SAST scanning | SecurityCodeScan for C# code | **Complete** |
+| Chart markers | Triangle markers for significant moves | **Complete** |
+| Wikipedia-style popups | Hover popups with news thumbnails | **Complete** |
+| Configurable threshold | Slider to adjust significant move threshold (3-10%) | **Complete** |
+
+### Planned
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| SRI for CDN scripts | Subresource Integrity hashes | Planned |
+| Unit tests | xUnit test suite | Planned |
+
+---
+
 ## Version History
 
 | Date | Change |
 |------|--------|
+| 01/16/2026 | Completed: .NET chart markers and Wikipedia-style hover popups with news |
+| 01/16/2026 | Completed: .NET ticker search autocomplete, security headers |
 | 01/15/2026 | Completed: Pre-commit hooks (Bandit, detect-secrets, file hygiene) |
 | 01/15/2026 | Completed: DAST (ZAP); added security headers section from scan results |
 | 01/14/2026 | Completed: Interactive charts (Plotly) and Web dashboard (Streamlit) |

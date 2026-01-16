@@ -4,6 +4,7 @@ tokens.md
 *.key
 *.pem
 credentials.*
+appsettings.Development.json
 
 # OS files
 .DS_Store

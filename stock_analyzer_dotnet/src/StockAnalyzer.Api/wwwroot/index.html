@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Analyzer</title>
     <!-- Tailwind CSS CDN (Note: For production, use pre-built CSS with SRI) -->
-    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Plotly.js for charts -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -221,7 +221,7 @@
 
     <!-- Wikipedia-style hover card for significant moves -->
     <div id="wiki-hover-card" class="hidden fixed z-50 w-80 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden"
-         style="font-family: system-ui, sans-serif; pointer-events: none;">
+         style="font-family: system-ui, sans-serif;">
         <img id="wiki-hover-image" class="w-full h-36 object-cover border-b hidden" alt="">
         <div id="wiki-hover-placeholder" class="w-full h-16 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

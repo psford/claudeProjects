@@ -150,3 +150,10 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Added hover card logic to app.js | Success |
 | - | Built and tested .NET app | Success |
 | - | API returns TSLA significant moves (20 at 5%) | Success |
+| - | Fixed CSS issue (removed crossorigin="anonymous" from CDN scripts) | Success |
+| - | Re-enabled CSP security headers | Success |
+| - | Configured Finnhub API key in appsettings.Development.json | Success |
+| - | Fixed hover popup disappearing issue (added delay + hover detection) | Success |
+| - | Verified Wikipedia-style hover popups working with news thumbnails | Success |
+| - | Updated FUNCTIONAL_SPEC.md with new FR-005 requirements | Success |
+| - | Cleaned up debug console.log statements | Success |

@@ -11,6 +11,8 @@ const App = {
     significantMovesData: null,
     searchTimeout: null,
     hoverTimeout: null,
+    hideTimeout: null,
+    isHoverCardHovered: false,
 
     /**
      * Initialize the application
@@ -398,8 +400,26 @@ const App = {
                 clearTimeout(this.hoverTimeout);
                 this.hoverTimeout = null;
             }
-            this.hideHoverCard();
+            // Delay hiding to allow moving to the card
+            this.scheduleHideHoverCard();
         });
+
+        // Setup hover card mouse events (only once)
+        const card = document.getElementById('wiki-hover-card');
+        if (card && !card.dataset.listenersAttached) {
+            card.dataset.listenersAttached = 'true';
+            card.addEventListener('mouseenter', () => {
+                this.isHoverCardHovered = true;
+                if (this.hideTimeout) {
+                    clearTimeout(this.hideTimeout);
+                    this.hideTimeout = null;
+                }
+            });
+            card.addEventListener('mouseleave', () => {
+                this.isHoverCardHovered = false;
+                this.scheduleHideHoverCard();
+            });
+        }
     },
 
     /**
@@ -498,6 +518,20 @@ const App = {
         card.style.left = `${left}px`;
         card.style.top = `${top}px`;
         card.classList.remove('hidden');
+    },
+
+    /**
+     * Schedule hiding the hover card with delay
+     */
+    scheduleHideHoverCard() {
+        if (this.hideTimeout) {
+            clearTimeout(this.hideTimeout);
+        }
+        this.hideTimeout = setTimeout(() => {
+            if (!this.isHoverCardHovered) {
+                this.hideHoverCard();
+            }
+        }, 300); // 300ms delay to allow moving to card
     },
 
     /**

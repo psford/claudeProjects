@@ -133,12 +133,24 @@ The Stock Analyzer Dashboard allows users to:
 
 | ID | Requirement |
 |----|-------------|
-| FR-005.1 | The system must identify days where the stock moved by a configurable threshold (default ±3%) |
+| FR-005.1 | The system must identify days where the stock moved by a configurable threshold (default ±5%) |
 | FR-005.2 | The system must display significant moves in a dedicated panel |
 | FR-005.3 | The system must show the date and percentage change for each move |
 | FR-005.4 | The system must color-code moves (green for up, red for down) |
+| FR-005.5 | The system must display triangle markers on the chart for significant moves |
+| FR-005.6 | The system must allow users to adjust the threshold via a slider (3% to 10%) |
+| FR-005.7 | The system must display a Wikipedia-style hover popup when hovering on chart markers |
+| FR-005.8 | The hover popup must show: date, return %, news headline, summary, source, and thumbnail |
+| FR-005.9 | The hover popup headline must be a clickable link to the full news article |
+| FR-005.10 | The hover popup must remain visible when the user moves their mouse to interact with it |
 
-**Calculation Method:** Daily return = (Today's Close - Yesterday's Close) / Yesterday's Close
+**Calculation Method:** Daily return = (Today's Close - Today's Open) / Today's Open
+
+**Chart Markers:**
+| Direction | Symbol | Color |
+|-----------|--------|-------|
+| Positive (+N%) | Triangle Up | Green (#10B981) |
+| Negative (-N%) | Triangle Down | Red (#EF4444) |
 
 ### 3.6 Company Information (FR-006)
 

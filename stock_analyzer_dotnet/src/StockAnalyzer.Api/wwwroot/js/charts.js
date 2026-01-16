@@ -117,7 +117,7 @@ const Charts = {
                     return dataPoint ? dataPoint.high * 1.02 : m.closePrice * 1.02;
                 });
 
-                traces.push({
+                const upTrace = {
                     type: 'scatter',
                     mode: 'markers',
                     x: upMoves.map(m => m.date.split('T')[0]),
@@ -125,14 +125,16 @@ const Charts = {
                     name: `+${threshold}% Move`,
                     marker: {
                         color: '#10B981',
-                        size: 14,
+                        size: 18,
                         symbol: 'triangle-up',
-                        line: { color: '#065F46', width: 1 }
+                        line: { color: '#065F46', width: 2 }
                     },
                     customdata: upMoves,
-                    hoverinfo: 'skip',
+                    hoverinfo: 'text',
+                    hovertext: upMoves.map(m => `+${m.percentChange.toFixed(1)}%`),
                     showlegend: true
-                });
+                };
+                traces.push(upTrace);
             }
 
             // Red markers for negative moves (positioned below the low)
@@ -144,7 +146,7 @@ const Charts = {
                     return dataPoint ? dataPoint.low * 0.98 : m.closePrice * 0.98;
                 });
 
-                traces.push({
+                const downTrace = {
                     type: 'scatter',
                     mode: 'markers',
                     x: downMoves.map(m => m.date.split('T')[0]),
@@ -152,14 +154,16 @@ const Charts = {
                     name: `-${threshold}% Move`,
                     marker: {
                         color: '#EF4444',
-                        size: 14,
+                        size: 18,
                         symbol: 'triangle-down',
-                        line: { color: '#991B1B', width: 1 }
+                        line: { color: '#991B1B', width: 2 }
                     },
                     customdata: downMoves,
-                    hoverinfo: 'skip',
+                    hoverinfo: 'text',
+                    hovertext: downMoves.map(m => `${m.percentChange.toFixed(1)}%`),
                     showlegend: true
-                });
+                };
+                traces.push(downTrace);
             }
         }
 
