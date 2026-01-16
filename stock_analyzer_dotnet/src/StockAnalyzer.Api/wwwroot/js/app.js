@@ -478,7 +478,7 @@ const App = {
         const getAnimalImageUrl = () => {
             const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
             if (this.currentAnimal === 'dogs') {
-                return `https://placedog.net/320/150?id=${cacheBuster}`;
+                return `https://placedog.net/320/150?${cacheBuster}`;
             }
             return `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
         };
