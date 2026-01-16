@@ -51,7 +51,7 @@ My background is a longtime financial services business analyst, who has program
 25. Proactive Slack listener management: If the Slack listener is not receiving messages or appears disconnected, restart it without asking. Check inbox status and restart the listener proactively to maintain two-way communication.
 26. Clarify correction vs inquiry: If the user asks "Did you do X?" and the answer is no, ask whether they would like this added as a guideline. The user may be inquiring or correcting—don't assume which.
 27. Test end-to-end, not just startup: When implementing two-way communication or any system with input/output, verify the full round-trip works—not just that the service starts. For the Slack listener: send a test message, then confirm it appears in the inbox. A running process is not proof of functionality.
-28. Redeploy after committing: When code changes are committed, ask the user if running services should be restarted to deploy the new code. A commit without redeployment leaves old code running.
+28. Redeploy after committing: See deployment rule D2.
 29. Use PowerShell fully: When working in PowerShell, leverage its full functionality for local processing. Prefer local commands over API calls to minimize token usage.
 30. Checkpoint system for graceful session ending: Save state periodically during long sessions to enable recovery if the session ends unexpectedly or approaches token limits.
     - **When to checkpoint:** After completing major tasks, every 10-15 exchanges, or before starting complex multi-step work
@@ -62,12 +62,7 @@ My background is a longtime financial services business analyst, who has program
 31. Document scan/audit findings: When running security scans (SAST, DAST) or other audits, add findings to ROADMAP.md. Include issue description, severity, and recommended fix. This ensures nothing is forgotten and provides a clear remediation backlog.
 32. Keep whileYouWereAway.md (WYA) updated: When completing tasks from WYA, mark them done immediately with a brief summary of what was accomplished. This keeps the task queue accurate and provides context for future sessions.
 33. "As a user" statements: When the user starts a prompt with "as a user" (or similar phrasing), treat it as a functional requirement and add it to `docs/FUNCTIONAL_SPEC.md`. These are user stories that define expected behavior.
-34. Building ≠ Running: A successful build/compile does not mean a service is running or accessible. Before telling the user a web application or service is available at a URL:
-    - **Verify the process is running:** Check if the port is listening (`netstat`, `curl`, or equivalent)
-    - **Start the service if needed:** Either start it and confirm, or explicitly tell the user the command to run it themselves
-    - **Test the endpoint:** Hit a health check or basic endpoint to confirm the service responds
-    - **Never claim "it's ready at localhost:XXXX"** based solely on a successful build
-    - This applies to: web servers, APIs, background services, Docker containers, or any process that must be running to be useful
+34. Building ≠ Running: See deployment rule D3.
 35. Never overwrite plan files: When creating implementation plans, always create a NEW plan file rather than overwriting an existing one. Plan files outside of git-tracked directories cannot be recovered if overwritten.
 36. Commit before overwriting: Before modifying or deleting any file, ensure the previous version is recoverable:
     - **Commit first:** If working in a git repo, commit current state before making destructive changes
@@ -84,6 +79,44 @@ My background is a longtime financial services business analyst, who has program
     - This applies to: CDNs, placeholder image services, APIs, webhooks, any external dependency
 39. Slack message confirmation: When completing a task received via Slack, add a ✅ reaction to the original message to confirm completion. This provides visual feedback in the Slack channel.
 40. Review security tools on new frameworks: Any time a new framework or language is introduced, review SAST and DAST tools to ensure adequate coverage. Add new scanners if needed (e.g., SecurityCodeScan for C#, Bandit for Python).
+
+# deployment
+
+Rules for deploying code changes to running services.
+
+D1. Kill before deploy: Before starting a new version of a background service or listener:
+    - **Identify running instances:** Check for existing processes running the same script/service
+    - **Kill old processes:** Terminate all old instances before starting the new one
+    - **Verify termination:** Confirm old processes are dead before proceeding
+    - **Single instance principle:** Only one version of a service should run at a time (unless explicitly designed for multiple instances)
+    - **Failure mode:** Multiple listeners = unpredictable behavior (old code may handle requests)
+
+D2. Redeploy after committing: When code changes are committed to a running service:
+    - Ask the user if the service should be restarted
+    - A commit without redeployment leaves old code running
+    - The new code only takes effect after the service is restarted
+    - (Moved from guideline #28)
+
+D3. Building ≠ Running: A successful build/compile does not mean a service is accessible:
+    - **Verify the process is running:** Check if the port is listening
+    - **Start the service if needed:** Either start it, or tell the user the command
+    - **Test the endpoint:** Hit a health check to confirm the service responds
+    - **Never claim "it's ready at localhost:XXXX"** based solely on a successful build
+    - (Moved from guideline #34)
+
+D4. Test end-to-end after deployment: After restarting a service:
+    - **Verify functionality:** Don't assume the new code works because the process started
+    - **Test the change:** Actually exercise the feature that was modified
+    - **Check for regressions:** Ensure existing functionality still works
+    - A running process is not proof of correct functionality
+
+D5. Deployment checklist:
+    1. Commit changes
+    2. Kill old process(es)
+    3. Start new process
+    4. Verify process is running
+    5. Test the specific change
+    6. Test basic functionality (smoke test)
 
 # known issues
 

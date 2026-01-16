@@ -189,3 +189,6 @@ ZAP Warnings (informational):
 | - | Added image recognition task to ROADMAP (via Slack) | Success |
 | - | Added --sync option to slack_listener.py | Success |
 | - | History sync needs bot invited to channel | Note: run `/invite @Claude Notifications` |
+| - | Updated Slack listener to use reactions only (no reply) | Success |
+| - | Created deployment section in CLAUDE.md (D1-D5) | Success |
+| - | Added D1: Kill before deploy rule | Success |
