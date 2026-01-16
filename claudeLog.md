@@ -160,6 +160,8 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Added appsettings.Development.json to .gitignore | Success |
 | - | Updated ROADMAP.md with .NET completed features | Success |
 | - | Committed all changes | Success (1969ca6) |
+| - | Fixed hover detection - changed hovermode to 'closest', increased marker size | Success |
+| - | Fixed popup race condition - cancel hide timeout when showing | Success |
 
 ### Commits Today (continued)
 3. `1506678` - Add chart markers and hover popups for significant moves

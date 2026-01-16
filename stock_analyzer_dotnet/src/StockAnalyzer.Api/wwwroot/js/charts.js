@@ -125,7 +125,7 @@ const Charts = {
                     name: `+${threshold}% Move`,
                     marker: {
                         color: '#10B981',
-                        size: 18,
+                        size: 22,
                         symbol: 'triangle-up',
                         line: { color: '#065F46', width: 2 }
                     },
@@ -154,7 +154,7 @@ const Charts = {
                     name: `-${threshold}% Move`,
                     marker: {
                         color: '#EF4444',
-                        size: 18,
+                        size: 22,
                         symbol: 'triangle-down',
                         line: { color: '#991B1B', width: 2 }
                     },
@@ -192,7 +192,8 @@ const Charts = {
                 x: 1
             },
             margin: { t: 60, r: 20, b: 40, l: 60 },
-            hovermode: 'x unified'
+            hovermode: 'closest',
+            hoverdistance: 20
         };
 
         const config = {

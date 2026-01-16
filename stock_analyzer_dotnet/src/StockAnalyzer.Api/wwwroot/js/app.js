@@ -388,10 +388,16 @@ const App = {
             const point = data.points[0];
             // Check if this is a marker trace (significant move)
             if (point.data.name && point.data.name.includes('Move') && point.customdata) {
+                // Cancel any pending hide immediately
+                if (this.hideTimeout) {
+                    clearTimeout(this.hideTimeout);
+                    this.hideTimeout = null;
+                }
+                // Cancel any pending show and reschedule
                 if (this.hoverTimeout) clearTimeout(this.hoverTimeout);
                 this.hoverTimeout = setTimeout(() => {
                     this.showHoverCard(data.event, point.customdata);
-                }, 200);
+                }, 150); // Reduced from 200ms for snappier response
             }
         });
 
@@ -426,6 +432,12 @@ const App = {
      * Show Wikipedia-style hover card for significant move
      */
     showHoverCard(event, moveData) {
+        // Cancel any pending hide when showing
+        if (this.hideTimeout) {
+            clearTimeout(this.hideTimeout);
+            this.hideTimeout = null;
+        }
+
         const card = document.getElementById('wiki-hover-card');
         const image = document.getElementById('wiki-hover-image');
         const placeholder = document.getElementById('wiki-hover-placeholder');
@@ -531,7 +543,7 @@ const App = {
             if (!this.isHoverCardHovered) {
                 this.hideHoverCard();
             }
-        }, 300); // 300ms delay to allow moving to card
+        }, 400); // 400ms delay to allow moving to card
     },
 
     /**
