@@ -166,3 +166,4 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 ### Commits Today (continued)
 3. `1506678` - Add chart markers and hover popups for significant moves
 4. `1969ca6` - Complete Wikipedia-style hover popups for significant moves
+5. `449d5b5` - Fix hover detection and popup race condition
