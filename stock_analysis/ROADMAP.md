@@ -89,6 +89,8 @@ Production deployment should address these warnings. Low priority for local deve
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnail images | Planned |
+| Hosting research | Identify free/cheap options to host the app online | Planned |
 | SRI for CDN scripts | Subresource Integrity hashes | Planned |
 | Unit tests | xUnit test suite | Planned |
 

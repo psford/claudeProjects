@@ -41,7 +41,26 @@
       "Bash(\"C:\\\\Program Files\\\\Docker\\\\Docker\\\\resources\\\\bin\\\\docker.exe\" pull zaproxy/zap-stable)",
       "Bash(set \"PATH=%PATH%;C:\\\\Program Files\\\\Docker\\\\Docker\\\\resources\\\\bin\")",
       "Bash(docker pull:*)",
-      "Bash(export PATH=\"$PATH:/c/Program Files/Docker/Docker/resources/bin\")"
+      "Bash(export PATH=\"$PATH:/c/Program Files/Docker/Docker/resources/bin\")",
+      "Bash(dir \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" /b /ad)",
+      "Bash(dotnet:*)",
+      "Bash(git reset:*)",
+      "Bash(netstat:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(taskkill:*)",
+      "Bash(wmic process:*)",
+      "Bash(cmd /c \"taskkill /F /PID 140012\")",
+      "Bash(cmd //c \"taskkill /F /PID 140012\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\.claude\" log --oneline -5)",
+      "Bash(cmd //c \"taskkill /F /PID 140528\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" diff HEAD~1 HEAD -- stock_analyzer_dotnet/src/StockAnalyzer.Api/wwwroot/index.html)",
+      "Bash(node --check:*)",
+      "Bash(cmd //c \"taskkill /F /PID 139580\")",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" log --oneline -- stock_analyzer_dotnet/src/StockAnalyzer.Api/wwwroot/index.html)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" show 9845c87 -- stock_analyzer_dotnet/src/StockAnalyzer.Api/wwwroot/index.html)",
+      "Bash(echo:*)",
+      "WebFetch(domain:placekitten.com)",
+      "WebFetch(domain:cataas.com)"
     ]
   }
 }
