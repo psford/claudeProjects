@@ -49,6 +49,7 @@ My background is a longtime financial services business analyst, who has program
     - Always err on the side of building reusable infrastructure
 25. Proactive Slack listener management: If the Slack listener is not receiving messages or appears disconnected, restart it without asking. Check inbox status and restart the listener proactively to maintain two-way communication.
 26. Clarify correction vs inquiry: If the user asks "Did you do X?" and the answer is no, ask whether they would like this added as a guideline. The user may be inquiring or correcting—don't assume which.
+27. Test end-to-end, not just startup: When implementing two-way communication or any system with input/output, verify the full round-trip works—not just that the service starts. For the Slack listener: send a test message, then confirm it appears in the inbox. A running process is not proof of functionality.
 
 # known issues
 
