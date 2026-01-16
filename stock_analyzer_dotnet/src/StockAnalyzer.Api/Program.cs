@@ -31,6 +31,26 @@ builder.Services.AddSingleton(sp =>
     return new AnalysisService(newsService);
 });
 
+// Register image processing services
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var modelPath = config["ImageProcessing:ModelPath"] ?? "MLModels/yolov8n.onnx";
+    var targetWidth = config.GetValue<int>("ImageProcessing:TargetWidth", 320);
+    var targetHeight = config.GetValue<int>("ImageProcessing:TargetHeight", 150);
+    return new ImageProcessingService(modelPath, targetWidth, targetHeight);
+});
+builder.Services.AddSingleton(sp =>
+{
+    var processor = sp.GetRequiredService<ImageProcessingService>();
+    var logger = sp.GetRequiredService<ILogger<ImageCacheService>>();
+    var config = sp.GetRequiredService<IConfiguration>();
+    var cacheSize = config.GetValue<int>("ImageProcessing:CacheSize", 50);
+    var refillThreshold = config.GetValue<int>("ImageProcessing:RefillThreshold", 10);
+    return new ImageCacheService(processor, logger, cacheSize, refillThreshold);
+});
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ImageCacheService>());
+
 // Serve static files from wwwroot
 builder.Services.AddDirectoryBrowser();
 
@@ -59,13 +79,14 @@ app.Use(async (context, next) =>
     // Permissions policy
     context.Response.Headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
     // Content Security Policy - allow CDN scripts for Tailwind and Plotly
+    // Images now served from our own backend (no external image fetches from client)
     context.Response.Headers["Content-Security-Policy"] =
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly; " +
         "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; " +
-        "img-src 'self' data: https:; " +
+        "img-src 'self' data: blob:; " +
         "font-src 'self' https:; " +
-        "connect-src 'self' https://dog.ceo";
+        "connect-src 'self'";
 
     await next();
 });
@@ -206,6 +227,49 @@ app.MapGet("/api/trending", async (int? count, StockDataService stockService) =>
     });
 })
 .WithName("GetTrendingStocks")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK);
+
+// Image API endpoints
+
+// GET /api/images/cat - Get a processed cat image
+app.MapGet("/api/images/cat", (ImageCacheService cache) =>
+{
+    var image = cache.GetCatImage();
+    return image != null
+        ? Results.File(image, "image/jpeg")
+        : Results.NotFound(new { error = "No cat images available. Cache may be warming up." });
+})
+.WithName("GetCatImage")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK, contentType: "image/jpeg")
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/images/dog - Get a processed dog image
+app.MapGet("/api/images/dog", (ImageCacheService cache) =>
+{
+    var image = cache.GetDogImage();
+    return image != null
+        ? Results.File(image, "image/jpeg")
+        : Results.NotFound(new { error = "No dog images available. Cache may be warming up." });
+})
+.WithName("GetDogImage")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK, contentType: "image/jpeg")
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/images/status - Get cache status
+app.MapGet("/api/images/status", (ImageCacheService cache) =>
+{
+    var (cats, dogs) = cache.GetCacheStatus();
+    return Results.Ok(new
+    {
+        cats,
+        dogs,
+        timestamp = DateTime.UtcNow
+    });
+})
+.WithName("GetImageCacheStatus")
 .WithOpenApi()
 .Produces(StatusCodes.Status200OK);
 

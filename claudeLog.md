@@ -216,3 +216,24 @@ ZAP Warnings (informational):
 | - | Implemented image pre-caching (50 cats, 50 dogs on load) | Success |
 | - | Added auto-refill when cache below 10 images | Success |
 | - | Fixed hover card image flash (clear on hide) | Success |
+| - | Updated DEPLOYMENT_ORACLE.md for Ubuntu 22.04 LTS | Success |
+| - | Created xUnit test project (StockAnalyzer.Core.Tests) | Success |
+| - | Added test project to solution | Success |
+| - | Created TestDataFactory helper class | Success |
+| - | Created AnalysisServiceTests (14 tests) | Success |
+| - | Created NewsServiceTests (11 tests) | Success |
+| - | Created StockDataServiceTests (15 tests, 3 skipped integration) | Success |
+| - | Created ModelCalculationTests (27 tests) | Success |
+| - | Ran all tests (64 passed, 3 skipped) | Success |
+| - | Added SRI hash for Plotly.js CDN (sha384) | Success |
+| - | Added comment explaining Tailwind JIT not SRI-compatible | Success |
+| - | Updated TECHNICAL_SPEC.md v1.2 (tests, SRI) | Success |
+| - | Clarified guideline #41 (TECHNICAL_SPEC always, FUNCTIONAL_SPEC for user-facing only) | Success |
+| - | Applied CSS quick fix (object-top) for image cropping | Success |
+| - | Implemented ML-based image processing (YOLOv8n ONNX) | Success |
+| - | Created ImageProcessingService (ML detection + cropping) | Success |
+| - | Created ImageCacheService (BackgroundService) | Success |
+| - | Added /api/images/cat, /api/images/dog, /api/images/status endpoints | Success |
+| - | Updated frontend to use backend image API | Success |
+| - | Updated CSP (removed dog.ceo, added blob:) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.3 | Success |

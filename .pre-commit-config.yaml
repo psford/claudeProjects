@@ -24,6 +24,7 @@ repos:
       - id: check-added-large-files
         name: Block large files (>500KB)
         args: ['--maxkb=500']
+        exclude: '\.onnx$'  # ML models are expected to be large
       - id: detect-private-key
         name: Detect private keys
       - id: end-of-file-fixer

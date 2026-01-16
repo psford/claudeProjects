@@ -31,7 +31,7 @@ Planned features and improvements for the claudeProjects codebase.
 | News sentiment analysis | Integrate news API with sentiment scoring | Planned |
 | Options chain analysis | Options data retrieval and Greeks calculation | Planned |
 | Backtesting framework | Simple strategy backtesting capability | Planned |
-| Image recognition for thumbnails | Ensure cat/dog faces are visible in popup images | Future |
+| Image recognition for thumbnails | ML-based detection to center cat/dog faces in popups | **Complete** |
 
 ---
 
@@ -90,8 +90,11 @@ Production deployment should address these warnings. Low priority for local deve
 | Image pre-caching | Pre-load 50 cats/dogs on page load, auto-refill when low | **Complete** |
 
 ### Planned
-| SRI for CDN scripts | Subresource Integrity hashes | Planned |
-| Unit tests | xUnit test suite | Planned |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| SRI for CDN scripts | Subresource Integrity for Plotly.js (Tailwind JIT not compatible) | **Complete** |
+| Unit tests | xUnit test suite (67 tests: 64 unit, 3 integration) | **Complete** |
+| ML image processing | YOLOv8n ONNX for intelligent cat/dog cropping in thumbnails | **Complete** |
 
 ---
 
@@ -99,6 +102,9 @@ Production deployment should address these warnings. Low priority for local deve
 
 | Date | Change |
 |------|--------|
+| 01/16/2026 | Completed: ML image processing with YOLOv8n ONNX for intelligent thumbnail cropping |
+| 01/16/2026 | Completed: SRI for Plotly.js CDN (Tailwind JIT not compatible with SRI) |
+| 01/16/2026 | Completed: xUnit test suite (67 tests covering AnalysisService, NewsService, StockDataService, Models) |
 | 01/16/2026 | Completed: Image pre-caching system (50 cats/dogs, auto-refill) |
 | 01/16/2026 | Completed: Oracle Cloud deployment guide with Dockerfile and docker-compose |
 | 01/16/2026 | Completed: Cats vs Dogs toggle for popup thumbnails (using Dog CEO API) |

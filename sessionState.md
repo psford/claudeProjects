@@ -80,6 +80,8 @@ claudeProjects/
 
 **Total:** 41 general guidelines + 5 deployment rules
 
+**#41 clarified:** TECHNICAL_SPEC.md must ALWAYS be updated for any code changes. FUNCTIONAL_SPEC.md only when user-facing behavior changes.
+
 **Key guidelines:**
 - **#15** Test before completion
 - **#22** Context efficiency (rules files are sacrosanct)
@@ -103,21 +105,31 @@ claudeProjects/
 - ✅ Moving average overlays (20, 50, 200-day)
 - ✅ Ticker search with autocomplete
 - ✅ Significant move markers (triangles)
-- ✅ Wikipedia-style hover popups with cat images (cataas.com)
+- ✅ Wikipedia-style hover popups with cat/dog images
 - ✅ Configurable threshold slider (3-10%)
 - ✅ Security scans passed (SAST: 0, DAST: 114 passed)
+- ✅ ML-based image processing (YOLOv8n ONNX for intelligent cropping)
 
 ---
 
 ## Pending Tasks (ROADMAP.md)
 
+**.NET Dashboard:** All planned features complete!
+
+**Python Stock Analysis (from original ROADMAP):**
 | Task | Description | Status |
 |------|-------------|--------|
-| Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnails | Planned |
-| Image recognition | Ensure cat/dog faces are visible in thumbnails | Planned |
-| Hosting research | Identify free/cheap hosting options | Planned |
-| SRI for CDN scripts | Subresource Integrity hashes | Planned |
-| Unit tests | xUnit test suite | Planned |
+| Technical indicators | RSI, MACD, Bollinger Bands | Planned |
+| Multi-stock comparison | Compare stocks on single chart | Planned |
+| Portfolio tracker | Track holdings, weighted returns | Planned |
+
+**Recently Completed:**
+- ✅ ML image processing (YOLOv8n ONNX for intelligent cropping)
+- ✅ SRI for Plotly.js CDN
+- ✅ Unit tests - xUnit test suite (67 tests)
+- ✅ Cats vs Dogs toggle
+- ✅ Image pre-caching
+- ✅ Hosting research (Oracle Cloud guide)
 
 ---
 

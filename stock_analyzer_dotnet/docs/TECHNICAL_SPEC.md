@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.1
+**Version:** 1.3
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -36,6 +36,9 @@ This specification covers:
 | Finnhub | Third-party financial news API service |
 | Dog CEO API | Third-party random dog image API |
 | cataas | Cat as a Service - random cat image API |
+| ONNX | Open Neural Network Exchange - portable ML model format |
+| YOLOv8 | You Only Look Once v8 - object detection model |
+| COCO | Common Objects in Context - ML dataset with 80 object classes |
 
 ---
 
@@ -69,8 +72,9 @@ This specification covers:
 │  │ - StockInfo               - StockDataService (Yahoo Finance)   │ │
 │  │ - OhlcvData               - NewsService (Finnhub)              │ │
 │  │ - HistoricalDataResult    - AnalysisService (MAs, Volatility)  │ │
-│  │ - NewsItem/NewsResult     - SearchResult                       │ │
-│  │ - SignificantMove                                              │ │
+│  │ - NewsItem/NewsResult     - ImageProcessingService (ML/ONNX)   │ │
+│  │ - SignificantMove         - ImageCacheService (Background)     │ │
+│  │ - SearchResult                                                 │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -96,14 +100,24 @@ This specification covers:
 └────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     External Image APIs (Frontend)                   │
+│                     Image Processing (Server-Side)                   │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │  ImageProcessingService             ImageCacheService           │ │
+│  │  ┌──────────────────────┐          ┌──────────────────────┐   │ │
+│  │  │ YOLOv8n ONNX Model   │          │ BackgroundService    │   │ │
+│  │  │ - Detect cat/dog     │    ───>  │ - Maintain 50+ cache │   │ │
+│  │  │ - Crop to center     │          │ - Auto-refill < 10   │   │ │
+│  │  │ - Resize 320×150     │          │ - Thread-safe queue  │   │ │
+│  │  └──────────────────────┘          └──────────────────────┘   │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                              │                                       │
+│              ┌───────────────┴───────────────┐                      │
+│              ▼                               ▼                      │
 │  ┌────────────────────────────┐    ┌────────────────────────────┐  │
 │  │   Dog CEO API              │    │   cataas.com               │  │
 │  │   (dog.ceo)                │    │   (Cat as a Service)       │  │
-│  │                             │    │                             │  │
-│  │  - /api/breeds/image/      │    │  - /cat?width=320&height=  │  │
-│  │    random/{count}          │    │    150&{cacheBuster}       │  │
-│  │  - Returns JSON with URLs  │    │  - Returns direct image    │  │
+│  │  - /api/breeds/image/     │    │  - /cat?width=640&height=  │  │
+│  │    random                  │    │    640&{cacheBuster}       │  │
 │  └────────────────────────────┘    └────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -123,9 +137,12 @@ This specification covers:
 |-------|------------|---------------|
 | Runtime | .NET | 8.0 LTS |
 | Web Framework | ASP.NET Core Minimal APIs | Built-in |
-| Stock Data | OoplesFinance.YahooFinanceAPI | NuGet, MIT License |
+| Stock Data | OoplesFinance.YahooFinanceAPI | NuGet 1.7.1 |
 | Ticker Search | Yahoo Finance Search API | Direct HttpClient |
 | News Data | Finnhub REST API | Custom HttpClient |
+| ML Runtime | Microsoft.ML.OnnxRuntime | NuGet 1.17.0 |
+| Image Processing | SixLabors.ImageSharp | NuGet 3.1.7 |
+| Object Detection | YOLOv8n ONNX | ~12MB model |
 | Charting | Plotly.js | 2.27.0 (CDN) |
 | CSS Framework | Tailwind CSS | CDN |
 | Serialization | System.Text.Json | Built-in |
@@ -145,6 +162,9 @@ This specification covers:
 | `/api/stock/{ticker}/analysis` | GET | Performance metrics + MAs | `ticker`, `period` (optional) |
 | `/api/search` | GET | Ticker search | `q`: Search query (min 2 chars) |
 | `/api/trending` | GET | Trending stocks | `count` (optional, default: 10) |
+| `/api/images/cat` | GET | ML-processed cat image | None |
+| `/api/images/dog` | GET | ML-processed dog image | None |
+| `/api/images/status` | GET | Image cache status | None |
 | `/api/health` | GET | Health check | None |
 
 ### 3.2 Response Examples
@@ -324,6 +344,44 @@ Header: X-Finnhub-Token: {api_key}
 | `CalculatePerformance(data)` | Calculate return, volatility, high/low |
 | `DetectSignificantMovesAsync(...)` | Find moves exceeding threshold |
 
+### 5.4 ImageProcessingService
+
+**File:** `StockAnalyzer.Core/Services/ImageProcessingService.cs`
+
+| Method | Description |
+|--------|-------------|
+| `GetProcessedCatImageAsync()` | Fetch, detect, crop, and return cat image |
+| `GetProcessedDogImageAsync()` | Fetch, detect, crop, and return dog image |
+| `ProcessImage(imageData, classId)` | Run YOLO detection and crop |
+| `DetectAnimal(image, classId)` | Find animal bounding box via ONNX inference |
+| `CropToTarget(image, detection)` | Crop 320×150 centered on detection |
+
+**ML Model:**
+- **Model:** YOLOv8n (nano) exported to ONNX
+- **Input:** 640×640 RGB image, normalized to 0-1
+- **Output:** (1, 84, 8400) tensor - 4 bbox coords + 80 COCO class probabilities
+- **Classes:** Cat=15, Dog=16 (COCO class indices)
+- **Threshold:** 0.25 confidence for detection
+
+### 5.5 ImageCacheService
+
+**File:** `StockAnalyzer.Core/Services/ImageCacheService.cs`
+
+Implements `BackgroundService` for continuous cache maintenance.
+
+| Method | Description |
+|--------|-------------|
+| `GetCatImage()` | Dequeue processed cat image from cache |
+| `GetDogImage()` | Dequeue processed dog image from cache |
+| `GetCacheStatus()` | Return (cats, dogs) count tuple |
+| `ExecuteAsync(token)` | Background loop monitoring cache levels |
+
+**Cache Configuration:**
+- **Cache Size:** 50 images per type (configurable)
+- **Refill Threshold:** 10 images (triggers background refill)
+- **Storage:** `ConcurrentQueue<byte[]>` for thread-safe access
+- **Refill Delay:** 500ms between cache checks
+
 ---
 
 ## 6. Frontend Architecture
@@ -380,13 +438,14 @@ User clicks Analyze → analyzeStock() → Load all data
 
 ### 6.4 Image Caching System
 
-The application pre-caches animal images for instant display in hover popups.
+The application pre-caches ML-processed animal images for instant display in hover popups.
+Images are fetched from the backend API, which handles ML detection and cropping server-side.
 
 **Cache Configuration:**
 ```javascript
 imageCache: {
-    cats: [],           // Array of pre-loaded cat image URLs
-    dogs: [],           // Array of pre-loaded dog image URLs
+    cats: [],           // Array of blob URLs from backend
+    dogs: [],           // Array of blob URLs from backend
     isRefilling: { cats: false, dogs: false }  // Prevent concurrent refills
 },
 IMAGE_CACHE_SIZE: 50,       // Number of images to fetch per refill
@@ -399,33 +458,35 @@ Page Load → prefetchImages()
                 ↓
     ┌───────────┴───────────┐
     ↓                       ↓
-fetchDogImages(50)    fetchCatImages(50)
+fetchImagesFromBackend    fetchImagesFromBackend
+('dogs', 50)              ('cats', 50)
     ↓                       ↓
-Dog CEO API           Generate cataas URLs
-/random/50                  ↓
-    ↓               Preload into browser
-Preload into browser        ↓
-    ↓               Add to imageCache.cats
-Add to imageCache.dogs
+GET /api/images/dog       GET /api/images/cat
+(×50 requests)            (×50 requests)
+    ↓                       ↓
+Convert blob to URL       Convert blob to URL
+    ↓                       ↓
+Add to imageCache.dogs    Add to imageCache.cats
 ```
 
 **Image Consumption:**
 ```
 Hover on marker → getImageFromCache(type)
                         ↓
-                  Remove URL from cache (no repeats)
+                  Remove blob URL from cache (no repeats)
                         ↓
                   Check cache.length < 10?
                         ↓ Yes
-                  Trigger background refill
+                  Trigger background refill from backend
 ```
 
-**External APIs:**
+**Backend Image Processing:**
 
-| API | Endpoint | Response | Notes |
-|-----|----------|----------|-------|
-| Dog CEO | `GET /api/breeds/image/random/50` | JSON with 50 URLs | Single request for batch |
-| cataas | `GET /cat?width=320&height=150&{ts}` | Direct JPEG image | Cache-busted URLs |
+| Endpoint | Response | Processing |
+|----------|----------|------------|
+| `GET /api/images/cat` | JPEG 320×150 | YOLOv8n detection → center crop |
+| `GET /api/images/dog` | JPEG 320×150 | YOLOv8n detection → center crop |
+| `GET /api/images/status` | JSON | Cache counts and timestamp |
 
 ---
 
@@ -447,6 +508,13 @@ Hover on marker → getImageFromCache(type)
 {
   "Finnhub": {
     "ApiKey": "your_api_key_here"
+  },
+  "ImageProcessing": {
+    "ModelPath": "MLModels/yolov8n.onnx",
+    "CacheSize": 50,
+    "RefillThreshold": 10,
+    "TargetWidth": 320,
+    "TargetHeight": 150
   },
   "Logging": {
     "LogLevel": {
@@ -474,18 +542,96 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<StockDataService>();
 builder.Services.AddSingleton<NewsService>();
 builder.Services.AddSingleton<AnalysisService>();
+builder.Services.AddSingleton<ImageProcessingService>();
+builder.Services.AddSingleton<ImageCacheService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ImageCacheService>());
 ```
 
 ---
 
-## 8. Deployment
+## 8. Testing
 
-### 8.1 Prerequisites
+### 8.1 Test Project Structure
+
+```
+tests/
+└── StockAnalyzer.Core.Tests/
+    ├── StockAnalyzer.Core.Tests.csproj
+    ├── Services/
+    │   ├── AnalysisServiceTests.cs      # 14 tests
+    │   ├── NewsServiceTests.cs          # 11 tests
+    │   └── StockDataServiceTests.cs     # 15 tests (3 skipped integration)
+    ├── Models/
+    │   └── ModelCalculationTests.cs     # 27 tests
+    └── TestHelpers/
+        └── TestDataFactory.cs           # Test data generators
+```
+
+### 8.2 Test Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| xUnit | 2.6.6 | Test framework |
+| xUnit.runner.visualstudio | 2.5.6 | Test runner |
+| Microsoft.NET.Test.Sdk | 17.9.0 | Test SDK |
+| Moq | 4.20.70 | Mocking framework |
+| FluentAssertions | 6.12.0 | Assertion library |
+| coverlet.collector | 6.0.0 | Code coverage |
+
+### 8.3 Test Coverage
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| AnalysisService | 14 | Moving averages, significant moves, performance calculations |
+| NewsService | 11 | HTTP mocking, date range handling, JSON parsing |
+| StockDataService | 12 | Query validation, period mapping, dividend yield fix |
+| Model Calculations | 27 | Calculated properties on record types |
+| **Total** | **64** | Plus 3 skipped integration tests |
+
+### 8.4 Running Tests
+
+```bash
+# Run all tests
+cd stock_analyzer_dotnet
+dotnet test
+
+# Run with verbose output
+dotnet test --logger "console;verbosity=detailed"
+
+# Run specific test class
+dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
+
+# Run with coverage
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### 8.5 Mocking Strategy
+
+**NewsService:** Constructor accepts optional `HttpClient` for dependency injection:
+```csharp
+public NewsService(string apiKey, HttpClient? httpClient = null)
+```
+
+**AnalysisService:** Constructor accepts optional `NewsService`:
+```csharp
+public AnalysisService(NewsService? newsService = null)
+```
+
+**StockDataService:** Uses concrete `YahooClient` from OoplesFinance. Full mocking would require introducing an interface wrapper. Current tests focus on:
+- Query validation logic
+- Internal helper method behavior (documented via tests)
+- Integration tests marked as skipped
+
+---
+
+## 9. Deployment
+
+### 9.1 Prerequisites
 
 - .NET 8.0 SDK
 - Finnhub API key (free tier: https://finnhub.io/)
 
-### 8.2 Installation Steps
+### 9.2 Installation Steps
 
 ```bash
 # 1. Navigate to project
@@ -508,12 +654,15 @@ dotnet run --project src/StockAnalyzer.Api
 # http://localhost:5000
 ```
 
-### 8.3 File Structure
+### 9.3 File Structure
 
 ```
 stock_analyzer_dotnet/
 ├── StockAnalyzer.sln
 ├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
+├── DEPLOYMENT_ORACLE.md
 ├── docs/
 │   ├── FUNCTIONAL_SPEC.md
 │   └── TECHNICAL_SPEC.md
@@ -522,6 +671,8 @@ stock_analyzer_dotnet/
 │   │   ├── Program.cs
 │   │   ├── appsettings.json
 │   │   ├── StockAnalyzer.Api.csproj
+│   │   ├── MLModels/
+│   │   │   └── yolov8n.onnx           # YOLOv8 nano model (~12MB)
 │   │   └── wwwroot/
 │   │       ├── index.html
 │   │       └── js/
@@ -539,15 +690,22 @@ stock_analyzer_dotnet/
 │       └── Services/
 │           ├── StockDataService.cs
 │           ├── NewsService.cs
-│           └── AnalysisService.cs
+│           ├── AnalysisService.cs
+│           ├── ImageProcessingService.cs   # ML detection + cropping
+│           └── ImageCacheService.cs        # Background cache management
 └── tests/
+    └── StockAnalyzer.Core.Tests/
+        ├── StockAnalyzer.Core.Tests.csproj
+        ├── Services/
+        ├── Models/
+        └── TestHelpers/
 ```
 
 ---
 
-## 9. Known Issues and Workarounds
+## 10. Known Issues and Workarounds
 
-### 9.1 Dividend Yield Inconsistency
+### 10.1 Dividend Yield Inconsistency
 
 **Issue:** Yahoo Finance returns dividend yield in inconsistent formats.
 
@@ -562,7 +720,7 @@ private static decimal? ValidateDividendYield(decimal? yield)
 }
 ```
 
-### 9.2 OoplesFinance API Wrapper Types
+### 10.2 OoplesFinance API Wrapper Types
 
 **Issue:** The library returns wrapper types with `Raw` properties instead of primitive values.
 
@@ -581,7 +739,7 @@ private static decimal? TryGetDecimal(object? value)
 }
 ```
 
-### 9.3 Search Not in OoplesFinance
+### 10.3 Search Not in OoplesFinance
 
 **Issue:** OoplesFinance library doesn't provide ticker search functionality.
 
@@ -589,9 +747,9 @@ private static decimal? TryGetDecimal(object? value)
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
-### 10.1 Application Won't Start
+### 11.1 Application Won't Start
 
 | Error | Cause | Solution |
 |-------|-------|----------|
@@ -599,7 +757,7 @@ private static decimal? TryGetDecimal(object? value)
 | `Unable to find package` | NuGet restore needed | Run `dotnet restore` |
 | Build errors | SDK version mismatch | Ensure .NET 8.0 SDK installed |
 
-### 10.2 No Data Displayed
+### 11.2 No Data Displayed
 
 | Cause | Solution |
 |-------|----------|
@@ -607,7 +765,7 @@ private static decimal? TryGetDecimal(object? value)
 | Network connectivity | Check internet connection |
 | API rate limit | Wait and retry |
 
-### 10.3 News Not Loading
+### 11.3 News Not Loading
 
 | Cause | Solution |
 |-------|----------|
@@ -615,7 +773,7 @@ private static decimal? TryGetDecimal(object? value)
 | API rate limit exceeded | Wait 1 minute (free tier: 60 req/min) |
 | Invalid API key | Verify key at https://finnhub.io/dashboard |
 
-### 10.4 Search Not Working
+### 11.4 Search Not Working
 
 | Cause | Solution |
 |-------|----------|
@@ -625,69 +783,99 @@ private static decimal? TryGetDecimal(object? value)
 
 ---
 
-## 11. Security Considerations
+## 12. Security Considerations
 
-### 11.1 API Key Storage
+### 12.1 API Key Storage
 
 - API keys stored in `appsettings.json` (not committed to git)
 - `.gitignore` includes `appsettings.Development.json`
 - Production should use environment variables or secret management
 
-### 11.2 Data Privacy
+### 12.2 Data Privacy
 
 - No user data is stored or transmitted
 - All data requests are read-only
 - No authentication/login system
 
-### 11.3 Network Security
+### 12.3 Network Security
 
 - Default: localhost only (safe for development)
 - Production deployment should use HTTPS
 - CORS configured to allow any origin (restrict in production)
 
-### 11.4 Content Security Policy
+### 12.4 Content Security Policy
 
-The application uses CSP headers to restrict resource loading:
+The application uses CSP headers to restrict resource loading. Since images are now
+processed server-side, the client only connects to our own backend.
 
 ```
 Content-Security-Policy:
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly;
   style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
-  img-src 'self' data: https:;
+  img-src 'self' data: blob:;
   font-src 'self' https:;
-  connect-src 'self' https://dog.ceo
+  connect-src 'self'
 ```
 
 | Directive | Allowed Sources | Purpose |
 |-----------|-----------------|---------|
 | `script-src` | CDN for Tailwind, Plotly | Chart and styling libraries |
-| `img-src` | `https:` | Allow images from any HTTPS source (cataas, dog.ceo images) |
-| `connect-src` | `'self'`, `dog.ceo` | API calls to backend and Dog CEO API |
+| `img-src` | `'self'`, `data:`, `blob:` | Images from backend + blob URLs |
+| `connect-src` | `'self'` only | All API calls to own backend |
+
+### 12.5 Subresource Integrity (SRI)
+
+SRI hashes verify that CDN-loaded scripts haven't been tampered with.
+
+**Plotly.js** - SRI enabled:
+```html
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"
+        integrity="sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC"
+        crossorigin="anonymous"></script>
+```
+
+**Tailwind CSS CDN** - SRI not applicable:
+- `cdn.tailwindcss.com` is a JIT (Just-In-Time) compiler
+- Generates CSS dynamically based on classes used in the page
+- Content changes per request, so hash verification would fail
+- For production, pre-build Tailwind locally: `npx tailwindcss -o styles.css`
+
+| Resource | SRI Status | Reason |
+|----------|------------|--------|
+| Plotly.js 2.27.0 | ✅ Enabled | Static versioned file |
+| Tailwind CSS CDN | ❌ Not applicable | Dynamic JIT compiler |
 
 ---
 
-## 12. Performance Considerations
+## 13. Performance Considerations
 
-### 12.1 Caching
+### 13.1 Caching
 
 **Backend:** Currently no caching implemented. Each request fetches fresh data.
 **Future Enhancement:** Add `IMemoryCache` for API responses.
 
+**Server-Side Image Processing:**
+- YOLOv8n ONNX model loaded once at startup (~12MB)
+- Inference time: ~10-50ms per image on CPU
+- Background cache: 50 cat + 50 dog images pre-processed
+- Automatic refill when cache drops below 10 images
+- Images stored as compressed JPEG byte arrays (~10-30KB each)
+
 **Frontend Image Caching:**
-- 50 cat + 50 dog images pre-loaded on page init
-- Images stored in browser memory for instant display
+- Fetches blob URLs from `/api/images/{type}` endpoints
+- Images converted to blob URLs for instant display
 - Automatic refill when cache drops below 10 images
 - Each image used once to ensure variety
 
-### 12.2 API Rate Limits
+### 13.2 API Rate Limits
 
 | Service | Limit | Impact |
 |---------|-------|--------|
 | Finnhub | 60/min | News fetching may fail under heavy use |
 | Yahoo Finance | Undocumented | Occasional request failures possible |
 
-### 12.3 Parallel Requests
+### 13.3 Parallel Requests
 
 Frontend fetches all data in parallel for better performance:
 ```javascript
@@ -702,16 +890,18 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 ---
 
-## 13. Version History
+## 14. Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | 2026-01-16 | Server-side ML image processing with YOLOv8n ONNX, ImageProcessingService, ImageCacheService, new /api/images/* endpoints |
+| 1.2 | 2026-01-16 | Added unit test documentation (Section 8), SRI for Plotly.js (Section 12.5) |
 | 1.1 | 2026-01-16 | Added image caching system, Dog CEO API, CSP configuration |
 | 1.0 | 2026-01-16 | Initial .NET technical specification |
 
 ---
 
-## 14. References
+## 15. References
 
 - [ASP.NET Core Minimal APIs](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis)
 - [OoplesFinance.YahooFinanceAPI](https://github.com/ooples/OoplesFinance.YahooFinanceAPI)

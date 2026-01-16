@@ -19,4 +19,9 @@
     <ProjectReference Include="..\StockAnalyzer.Core\StockAnalyzer.Core.csproj" />
   </ItemGroup>
 
+  <!-- Copy ML models to output directory -->
+  <ItemGroup>
+    <None Include="MLModels\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

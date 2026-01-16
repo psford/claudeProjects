@@ -34,78 +34,71 @@ const App = {
     },
 
     /**
-     * Prefetch animal images on page load
+     * Prefetch animal images on page load.
+     * Images are processed server-side with ML detection for better cropping.
      */
     async prefetchImages() {
-        console.log('Prefetching animal images...');
+        console.log('Prefetching animal images from backend...');
+        // Backend cache fills in background - just start the frontend cache fill
         await Promise.all([
-            this.fetchDogImages(this.IMAGE_CACHE_SIZE),
-            this.fetchCatImages(this.IMAGE_CACHE_SIZE)
+            this.fetchImagesFromBackend('dogs', this.IMAGE_CACHE_SIZE),
+            this.fetchImagesFromBackend('cats', this.IMAGE_CACHE_SIZE)
         ]);
         console.log(`Image cache ready: ${this.imageCache.dogs.length} dogs, ${this.imageCache.cats.length} cats`);
     },
 
     /**
-     * Fetch multiple dog images from Dog CEO API
+     * Fetch processed images from backend API.
+     * Backend handles ML-based detection and cropping for optimal thumbnails.
+     */
+    async fetchImagesFromBackend(type, count) {
+        if (this.imageCache.isRefilling[type]) return;
+        this.imageCache.isRefilling[type] = true;
+
+        try {
+            const endpoint = `/api/images/${type === 'dogs' ? 'dog' : 'cat'}`;
+            const fetches = [];
+
+            for (let i = 0; i < count; i++) {
+                fetches.push(
+                    fetch(endpoint)
+                        .then(async (response) => {
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                return URL.createObjectURL(blob);
+                            }
+                            return null;
+                        })
+                        .catch(() => null)
+                );
+            }
+
+            // Fetch in batches to avoid overwhelming the server
+            const batchSize = 10;
+            for (let i = 0; i < fetches.length; i += batchSize) {
+                const batch = fetches.slice(i, i + batchSize);
+                const results = await Promise.all(batch);
+                const validUrls = results.filter(url => url !== null);
+                this.imageCache[type].push(...validUrls);
+            }
+
+            console.log(`Fetched ${this.imageCache[type].length} ${type} images from backend`);
+        } catch (e) {
+            console.error(`Failed to fetch ${type} images:`, e);
+        } finally {
+            this.imageCache.isRefilling[type] = false;
+        }
+    },
+
+    /**
+     * Legacy method names for backward compatibility
      */
     async fetchDogImages(count) {
-        if (this.imageCache.isRefilling.dogs) return;
-        this.imageCache.isRefilling.dogs = true;
-
-        try {
-            const response = await fetch(`https://dog.ceo/api/breeds/image/random/${count}`);
-            const data = await response.json();
-            if (data.status === 'success' && Array.isArray(data.message)) {
-                // Preload images into browser cache
-                const preloadPromises = data.message.map(url => this.preloadImage(url));
-                await Promise.allSettled(preloadPromises);
-                this.imageCache.dogs.push(...data.message);
-                console.log(`Fetched ${data.message.length} dog images (total: ${this.imageCache.dogs.length})`);
-            }
-        } catch (e) {
-            console.error('Failed to fetch dog images:', e);
-        } finally {
-            this.imageCache.isRefilling.dogs = false;
-        }
+        return this.fetchImagesFromBackend('dogs', count);
     },
 
-    /**
-     * Generate and preload cat image URLs from cataas.com
-     */
     async fetchCatImages(count) {
-        if (this.imageCache.isRefilling.cats) return;
-        this.imageCache.isRefilling.cats = true;
-
-        try {
-            const urls = [];
-            const baseTime = Date.now();
-            for (let i = 0; i < count; i++) {
-                // Generate unique URLs with cache busters
-                urls.push(`https://cataas.com/cat?width=320&height=150&${baseTime + i}`);
-            }
-
-            // Preload images into browser cache
-            const preloadPromises = urls.map(url => this.preloadImage(url));
-            await Promise.allSettled(preloadPromises);
-            this.imageCache.cats.push(...urls);
-            console.log(`Fetched ${urls.length} cat images (total: ${this.imageCache.cats.length})`);
-        } catch (e) {
-            console.error('Failed to fetch cat images:', e);
-        } finally {
-            this.imageCache.isRefilling.cats = false;
-        }
-    },
-
-    /**
-     * Preload an image into browser cache
-     */
-    preloadImage(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(url);
-            img.onerror = () => reject(url);
-            img.src = url;
-        });
+        return this.fetchImagesFromBackend('cats', count);
     },
 
     /**
@@ -602,28 +595,25 @@ const App = {
                 image.classList.remove('hidden');
                 placeholder.classList.add('hidden');
             } else {
-                // Cache empty - fallback to direct fetch (shouldn't happen often)
-                console.warn(`${this.currentAnimal} cache empty, fetching directly...`);
-                if (this.currentAnimal === 'dogs') {
-                    fetch('https://dog.ceo/api/breeds/image/random')
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                image.src = data.message;
-                                image.classList.remove('hidden');
-                                placeholder.classList.add('hidden');
-                            }
-                        })
-                        .catch(() => {
+                // Cache empty - fallback to backend fetch (shouldn't happen often)
+                console.warn(`${this.currentAnimal} cache empty, fetching from backend...`);
+                const endpoint = this.currentAnimal === 'dogs' ? '/api/images/dog' : '/api/images/cat';
+                fetch(endpoint)
+                    .then(async (response) => {
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            image.src = URL.createObjectURL(blob);
+                            image.classList.remove('hidden');
+                            placeholder.classList.add('hidden');
+                        } else {
                             image.classList.add('hidden');
                             placeholder.classList.remove('hidden');
-                        });
-                } else {
-                    const cacheBuster = Date.now();
-                    image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
-                    image.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                }
+                        }
+                    })
+                    .catch(() => {
+                        image.classList.add('hidden');
+                        placeholder.classList.remove('hidden');
+                    });
             }
         };
 
