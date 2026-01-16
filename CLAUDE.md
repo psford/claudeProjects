@@ -60,6 +60,7 @@ My background is a longtime financial services business analyst, who has program
     - **Graceful exit protocol:** Warn user, complete current atomic task, save checkpoint, commit, update log
 31. Document scan/audit findings: When running security scans (SAST, DAST) or other audits, add findings to ROADMAP.md. Include issue description, severity, and recommended fix. This ensures nothing is forgotten and provides a clear remediation backlog.
 32. Keep whileYouWereAway.md (WYA) updated: When completing tasks from WYA, mark them done immediately with a brief summary of what was accomplished. This keeps the task queue accurate and provides context for future sessions.
+33. "As a user" statements: When the user starts a prompt with "as a user" (or similar phrasing), treat it as a functional requirement and add it to `docs/FUNCTIONAL_SPEC.md`. These are user stories that define expected behavior.
 
 # known issues
 
