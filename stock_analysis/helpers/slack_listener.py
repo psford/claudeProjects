@@ -280,8 +280,11 @@ def create_app() -> App:
             timestamp=ts
         )
 
-        # Acknowledge receipt
-        say(f"Got it! I've saved your message for Claude. :white_check_mark:")
+        # Acknowledge receipt with reaction (cleaner than reply)
+        try:
+            client.reactions_add(channel=channel_id, timestamp=ts, name="white_check_mark")
+        except Exception as e:
+            log(f"Failed to add reaction: {e}")
 
     # Handle app mentions
     @app.event("app_mention")
@@ -314,7 +317,11 @@ def create_app() -> App:
             timestamp=ts
         )
 
-        say(f"Message received! Claude will see this in the next session. :robot_face:")
+        # Acknowledge with reaction
+        try:
+            client.reactions_add(channel=channel_id, timestamp=ts, name="white_check_mark")
+        except Exception as e:
+            log(f"Failed to add reaction: {e}")
 
     return app
 
