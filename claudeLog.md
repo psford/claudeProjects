@@ -186,3 +186,6 @@ ZAP Warnings (informational):
 | - | placekitten.com integration | **FAILED** - service was down (521), didn't test before integrating |
 | - | Switched to cataas.com for kitten images | Success |
 | - | Added guideline #38 - test external services before integrating | Success |
+| - | Added image recognition task to ROADMAP (via Slack) | Success |
+| - | Added --sync option to slack_listener.py | Success |
+| - | History sync needs bot invited to channel | Note: run `/invite @Claude Notifications` |

@@ -9,12 +9,14 @@ Usage:
     python helpers/slack_listener.py              # Run in foreground
     python helpers/slack_listener.py --daemon     # Run in background (Windows)
     python helpers/slack_listener.py --check      # Check inbox without starting listener
+    python helpers/slack_listener.py --sync       # Fetch missed messages from channel history
 
 The listener saves messages to: slack_inbox.json
 
 Environment:
     SLACK_BOT_TOKEN   Bot OAuth token (xoxb-...)
     SLACK_APP_TOKEN   App-level token for Socket Mode (xapp-...)
+    SLACK_CHANNEL_ID  Channel ID to sync history from (optional, for --sync)
 """
 
 import json
@@ -41,6 +43,10 @@ slack_logger = logging.getLogger("slack_bolt")
 PROJECT_ROOT = Path(__file__).parent.parent
 INBOX_FILE = PROJECT_ROOT / "slack_inbox.json"
 LOG_FILE = PROJECT_ROOT / "slack_listener.log"
+LAST_SYNC_FILE = PROJECT_ROOT / "slack_last_sync.txt"
+
+# Default channel for syncing (claude-notifications)
+DEFAULT_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID", "C0A8LB49E1M")
 
 
 def log(message: str):
@@ -109,6 +115,100 @@ def clear_inbox():
     """Clear all messages from inbox."""
     save_inbox([])
     log("Inbox cleared")
+
+
+def get_last_sync_ts() -> str:
+    """Get the timestamp of last sync, or None if never synced."""
+    if LAST_SYNC_FILE.exists():
+        try:
+            return LAST_SYNC_FILE.read_text().strip()
+        except Exception:
+            pass
+    return None
+
+
+def set_last_sync_ts(ts: str):
+    """Save the timestamp of last sync."""
+    LAST_SYNC_FILE.write_text(ts)
+
+
+def get_known_timestamps() -> set:
+    """Get set of all message timestamps we already have."""
+    inbox = load_inbox()
+    return {msg.get("timestamp") for msg in inbox if msg.get("timestamp")}
+
+
+def sync_history(channel_id: str = None, limit: int = 50) -> int:
+    """
+    Fetch recent channel history and add any missed messages.
+
+    Returns the number of new messages added.
+    """
+    from slack_sdk import WebClient
+
+    channel_id = channel_id or DEFAULT_CHANNEL_ID
+    bot_token = os.getenv("SLACK_BOT_TOKEN")
+
+    if not bot_token:
+        log("[ERROR] SLACK_BOT_TOKEN not found")
+        return 0
+
+    client = WebClient(token=bot_token)
+    known_ts = get_known_timestamps()
+    new_count = 0
+
+    try:
+        # Fetch recent messages
+        log(f"Syncing history from channel {channel_id}...")
+        result = client.conversations_history(channel=channel_id, limit=limit)
+
+        messages = result.get("messages", [])
+        log(f"Fetched {len(messages)} messages from channel")
+
+        # Process messages (oldest first)
+        for msg in reversed(messages):
+            # Skip bot messages
+            if msg.get("bot_id") or msg.get("subtype") == "bot_message":
+                continue
+
+            ts = msg.get("ts", "")
+
+            # Skip if we already have this message
+            if ts in known_ts:
+                continue
+
+            user_id = msg.get("user", "unknown")
+            text = msg.get("text", "")
+
+            # Get user display name
+            try:
+                user_info = client.users_info(user=user_id)
+                user_name = user_info["user"].get("real_name") or user_info["user"].get("name") or user_id
+            except Exception:
+                user_name = user_id
+
+            # Add to inbox
+            add_message(
+                user=user_name,
+                channel=f"#{channel_id}",
+                text=text,
+                timestamp=ts
+            )
+            known_ts.add(ts)
+            new_count += 1
+
+        # Update last sync timestamp
+        if messages:
+            latest_ts = messages[0].get("ts", "")
+            if latest_ts:
+                set_last_sync_ts(latest_ts)
+
+        log(f"Sync complete: {new_count} new messages added")
+        return new_count
+
+    except Exception as e:
+        log(f"[ERROR] Failed to sync history: {e}")
+        return 0
 
 
 def check_inbox():
@@ -245,6 +345,16 @@ def main():
         action="store_true",
         help="Run as background process (Windows)"
     )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Fetch missed messages from channel history"
+    )
+    parser.add_argument(
+        "--no-sync",
+        action="store_true",
+        help="Skip history sync on startup"
+    )
 
     args = parser.parse_args()
 
@@ -261,6 +371,12 @@ def main():
     if args.mark_read:
         mark_all_read()
         print("All messages marked as read.")
+        return 0
+
+    if args.sync:
+        new_count = sync_history()
+        print(f"Sync complete: {new_count} new messages added")
+        check_inbox()
         return 0
 
     # Validate tokens
@@ -281,6 +397,13 @@ def main():
     except Exception as e:
         print(f"[ERROR] Failed to create app: {e}")
         return 1
+
+    # Sync history on startup to catch missed messages
+    if not args.no_sync:
+        log("Syncing channel history to catch missed messages...")
+        new_count = sync_history()
+        if new_count > 0:
+            log(f"Found {new_count} missed messages")
 
     # Start listener
     log("Starting Slack listener...")
