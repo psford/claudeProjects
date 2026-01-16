@@ -96,13 +96,38 @@ app.UseStaticFiles();
 
 // API Endpoints
 
-// GET /api/stock/{ticker} - Get stock information
-app.MapGet("/api/stock/{ticker}", async (string ticker, StockDataService stockService) =>
+// GET /api/stock/{ticker} - Get stock information with company profile and identifiers
+app.MapGet("/api/stock/{ticker}", async (string ticker, StockDataService stockService, NewsService newsService) =>
 {
     var info = await stockService.GetStockInfoAsync(ticker);
-    return info != null
-        ? Results.Ok(info)
-        : Results.NotFound(new { error = "Stock not found", symbol = ticker });
+    if (info == null)
+        return Results.NotFound(new { error = "Stock not found", symbol = ticker });
+
+    // Fetch company profile from Finnhub (includes ISIN, CUSIP, company name)
+    var profile = await newsService.GetCompanyProfileAsync(ticker);
+
+    // Try to get SEDOL from OpenFIGI if we have an ISIN
+    string? sedol = null;
+    if (!string.IsNullOrEmpty(profile?.Isin))
+    {
+        sedol = await newsService.GetSedolFromIsinAsync(profile.Isin);
+    }
+
+    // Merge profile data with stock info
+    var enrichedInfo = info with
+    {
+        LongName = profile?.Name ?? info.LongName,
+        ShortName = profile?.Name ?? info.ShortName,
+        Exchange = profile?.Exchange ?? info.Exchange,
+        Industry = profile?.Industry ?? info.Industry,
+        Country = profile?.Country ?? info.Country,
+        Website = profile?.WebUrl ?? info.Website,
+        Isin = profile?.Isin,
+        Cusip = profile?.Cusip,
+        Sedol = sedol
+    };
+
+    return Results.Ok(enrichedInfo);
 })
 .WithName("GetStockInfo")
 .WithOpenApi()

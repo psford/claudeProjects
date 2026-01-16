@@ -186,12 +186,13 @@ const Charts = {
             showlegend: true,
             legend: {
                 orientation: 'h',
-                yanchor: 'bottom',
-                y: 1.02,
-                xanchor: 'right',
-                x: 1
+                yanchor: 'top',
+                y: -0.15,
+                xanchor: 'center',
+                x: 0.5
             },
-            margin: { t: 60, r: 20, b: 40, l: 60 },
+            autosize: true,
+            margin: { t: 50, r: 30, b: 80, l: 60, autoexpand: true },
             hovermode: 'closest',
             hoverdistance: 20
         };
@@ -202,7 +203,13 @@ const Charts = {
             modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
         };
 
-        Plotly.newPlot(elementId, traces, layout, config);
+        Plotly.newPlot(elementId, traces, layout, config).then(() => {
+            // Trigger resize after initial render to ensure full width
+            const chartEl = document.getElementById(elementId);
+            if (chartEl) {
+                Plotly.Plots.resize(chartEl);
+            }
+        });
     },
 
     /**

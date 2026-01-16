@@ -207,6 +207,18 @@ const App = {
                 this.currentAnimal = e.target.value;
             });
         });
+
+        // Window resize handler for chart responsiveness
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const chartEl = document.getElementById('stock-chart');
+                if (chartEl && chartEl.data) {
+                    Plotly.Plots.resize(chartEl);
+                }
+            }, 150);
+        });
     },
 
     /**
@@ -330,19 +342,47 @@ const App = {
         const priceChangePercent = info.dayChangePercent || 0;
         const isPositive = priceChange >= 0;
 
+        // Build identifiers list
+        const identifiers = [
+            { label: 'Ticker', value: info.symbol },
+            { label: 'ISIN', value: info.isin },
+            { label: 'CUSIP', value: info.cusip },
+            { label: 'SEDOL', value: info.sedol }
+        ].filter(id => id.value);
+
+        const identifiersHtml = identifiers.length > 0
+            ? `<div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                ${identifiers.map(id => `
+                    <span class="text-xs text-gray-500">
+                        <span class="font-medium">${id.label}:</span> ${id.value}
+                    </span>
+                `).join('')}
+               </div>`
+            : '';
+
+        // Smart truncation: only truncate long descriptions, and cut at sentence boundaries
+        const descriptionHtml = info.description
+            ? `<p class="text-sm text-gray-600 mt-3">${this.truncateAtSentence(info.description, 500)}</p>`
+            : '';
+
         document.getElementById('stock-info').innerHTML = `
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900">${info.symbol}</h2>
-                <p class="text-gray-600">${info.shortName || info.symbol}</p>
-                <p class="text-sm text-gray-500">${info.exchange || ''} ${info.currency ? `• ${info.currency}` : ''}</p>
-            </div>
-            <div class="text-right">
-                <div class="text-3xl font-bold text-gray-900">
-                    $${this.formatNumber(info.currentPrice)}
+            <div class="flex-1">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">${info.longName || info.shortName || info.symbol}</h2>
+                        <p class="text-sm text-gray-500">${info.exchange || ''} ${info.currency ? `• ${info.currency}` : ''}${info.sector ? ` • ${info.sector}` : ''}</p>
+                        ${identifiersHtml}
+                    </div>
+                    <div class="text-right ml-4">
+                        <div class="text-3xl font-bold text-gray-900">
+                            $${this.formatNumber(info.currentPrice)}
+                        </div>
+                        <div class="text-lg ${isPositive ? 'text-success' : 'text-danger'}">
+                            ${isPositive ? '+' : ''}${this.formatNumber(priceChange)} (${isPositive ? '+' : ''}${this.formatNumber(priceChangePercent)}%)
+                        </div>
+                    </div>
                 </div>
-                <div class="text-lg ${isPositive ? 'text-success' : 'text-danger'}">
-                    ${isPositive ? '+' : ''}${this.formatNumber(priceChange)} (${isPositive ? '+' : ''}${this.formatNumber(priceChangePercent)}%)
-                </div>
+                ${descriptionHtml}
             </div>
         `;
     },
@@ -747,6 +787,39 @@ const App = {
         if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
         if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
         return value.toString();
+    },
+
+    /**
+     * Truncate text at sentence boundary if it exceeds maxLength.
+     * Only truncates if necessary, and always ends at a complete sentence.
+     */
+    truncateAtSentence(text, maxLength = 500) {
+        if (!text || text.length <= maxLength) {
+            return text;
+        }
+
+        // Find sentence boundaries (., !, ?) followed by space or end
+        const sentenceEnders = /[.!?](?:\s|$)/g;
+        let lastGoodEnd = 0;
+        let match;
+
+        while ((match = sentenceEnders.exec(text)) !== null) {
+            const endPos = match.index + 1; // Include the punctuation
+            if (endPos <= maxLength) {
+                lastGoodEnd = endPos;
+            } else {
+                break;
+            }
+        }
+
+        // If we found a sentence boundary, use it
+        if (lastGoodEnd > 0) {
+            return text.substring(0, lastGoodEnd).trim();
+        }
+
+        // Fallback: no sentence boundary found within limit, just return full text
+        // (better to show full text than cut mid-sentence)
+        return text;
     }
 };
 

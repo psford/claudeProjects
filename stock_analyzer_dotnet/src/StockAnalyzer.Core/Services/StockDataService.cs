@@ -25,6 +25,32 @@ public class StockDataService
             if (summary == null)
                 return null;
 
+            // Try to get asset profile for description and additional info
+            string? description = null;
+            string? sector = null;
+            string? industry = null;
+            string? website = null;
+            string? country = null;
+            int? employees = null;
+
+            try
+            {
+                var profile = await yahooClient.GetAssetProfileAsync(symbol);
+                if (profile != null)
+                {
+                    description = TryGetString(profile, "LongBusinessSummary");
+                    sector = TryGetString(profile, "Sector");
+                    industry = TryGetString(profile, "Industry");
+                    website = TryGetString(profile, "Website");
+                    country = TryGetString(profile, "Country");
+                    employees = TryGetInt(profile, "FullTimeEmployees");
+                }
+            }
+            catch
+            {
+                // Profile fetch failed, continue with basic info
+            }
+
             // Extract numeric values safely using reflection or direct property access
             // The API returns wrapper types, we need to extract the actual values
             return new StockInfo
@@ -32,12 +58,14 @@ public class StockDataService
                 Symbol = symbol.ToUpper(),
                 ShortName = symbol.ToUpper(),
                 LongName = null,
-                Sector = null,
-                Industry = null,
-                Website = null,
-                Country = null,
+                Sector = sector,
+                Industry = industry,
+                Website = website,
+                Country = country,
                 Currency = summary.Currency,
                 Exchange = null,
+                Description = description,
+                FullTimeEmployees = employees,
 
                 CurrentPrice = TryGetDecimal(summary.Open),
                 PreviousClose = TryGetDecimal(summary.PreviousClose),
@@ -63,6 +91,37 @@ public class StockDataService
             };
         }
         catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private static string? TryGetString(object obj, string propertyName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propertyName);
+            return prop?.GetValue(obj)?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static int? TryGetInt(object obj, string propertyName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propertyName);
+            var value = prop?.GetValue(obj);
+            if (value == null) return null;
+            if (value is int i) return i;
+            if (value is long l) return (int)l;
+            if (int.TryParse(value.ToString(), out var parsed)) return parsed;
+            return null;
+        }
+        catch
         {
             return null;
         }

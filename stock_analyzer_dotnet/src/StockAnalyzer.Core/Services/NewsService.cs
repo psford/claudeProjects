@@ -84,6 +84,156 @@ public class NewsService
     }
 
     /// <summary>
+    /// Get company profile including identifiers (ISIN, CUSIP) from Finnhub.
+    /// </summary>
+    public async Task<CompanyProfile?> GetCompanyProfileAsync(string symbol)
+    {
+        var url = $"{BaseUrl}/stock/profile2?symbol={symbol.ToUpper()}&token={_apiKey}";
+
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<FinnhubCompanyProfile>(url);
+
+            if (response == null || string.IsNullOrEmpty(response.Name))
+                return null;
+
+            return new CompanyProfile
+            {
+                Symbol = symbol.ToUpper(),
+                Name = response.Name,
+                Country = response.Country,
+                Currency = response.Currency,
+                Exchange = response.Exchange,
+                Industry = response.FinnhubIndustry,
+                WebUrl = response.WebUrl,
+                Logo = response.Logo,
+                Isin = response.Isin,
+                Cusip = response.Cusip,
+                MarketCapitalization = response.MarketCapitalization,
+                ShareOutstanding = response.ShareOutstanding,
+                IpoDate = response.Ipo
+            };
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Look up SEDOL using OpenFIGI API (Bloomberg's free identifier mapping).
+    /// SEDOL is primarily available for UK/Irish securities.
+    /// </summary>
+    public async Task<string?> GetSedolFromIsinAsync(string isin)
+    {
+        if (string.IsNullOrEmpty(isin))
+            return null;
+
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openfigi.com/v3/mapping")
+            {
+                Content = JsonContent.Create(new[]
+                {
+                    new { idType = "ID_ISIN", idValue = isin }
+                })
+            };
+            request.Headers.Add("X-OPENFIGI-APIKEY", ""); // Empty string for anonymous access (limited rate)
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var results = await response.Content.ReadFromJsonAsync<List<OpenFigiResponse>>();
+            var data = results?.FirstOrDefault()?.Data?.FirstOrDefault();
+
+            // OpenFIGI returns securityType2 which sometimes contains SEDOL-related info
+            // For UK stocks, we can extract SEDOL from the compositeFIGI mapping
+            return data?.Sedol;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// OpenFIGI API response models.
+    /// </summary>
+    private class OpenFigiResponse
+    {
+        [JsonPropertyName("data")]
+        public List<OpenFigiData>? Data { get; set; }
+    }
+
+    private class OpenFigiData
+    {
+        [JsonPropertyName("figi")]
+        public string? Figi { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("ticker")]
+        public string? Ticker { get; set; }
+
+        [JsonPropertyName("exchCode")]
+        public string? ExchCode { get; set; }
+
+        [JsonPropertyName("compositeFIGI")]
+        public string? CompositeFigi { get; set; }
+
+        [JsonPropertyName("securityType")]
+        public string? SecurityType { get; set; }
+
+        // SEDOL may be included for UK/Irish securities
+        [JsonPropertyName("sedol")]
+        public string? Sedol { get; set; }
+    }
+
+    /// <summary>
+    /// Finnhub company profile response model.
+    /// </summary>
+    private class FinnhubCompanyProfile
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("country")]
+        public string? Country { get; set; }
+
+        [JsonPropertyName("currency")]
+        public string? Currency { get; set; }
+
+        [JsonPropertyName("exchange")]
+        public string? Exchange { get; set; }
+
+        [JsonPropertyName("finnhubIndustry")]
+        public string? FinnhubIndustry { get; set; }
+
+        [JsonPropertyName("weburl")]
+        public string? WebUrl { get; set; }
+
+        [JsonPropertyName("logo")]
+        public string? Logo { get; set; }
+
+        [JsonPropertyName("ipo")]
+        public string? Ipo { get; set; }
+
+        [JsonPropertyName("marketCapitalization")]
+        public decimal? MarketCapitalization { get; set; }
+
+        [JsonPropertyName("shareOutstanding")]
+        public decimal? ShareOutstanding { get; set; }
+
+        [JsonPropertyName("cusip")]
+        public string? Cusip { get; set; }
+
+        [JsonPropertyName("isin")]
+        public string? Isin { get; set; }
+    }
+
+    /// <summary>
     /// Finnhub API response model.
     /// </summary>
     private class FinnhubNewsItem

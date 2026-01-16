@@ -15,6 +15,15 @@ public record StockInfo
     public string? Currency { get; init; }
     public string? Exchange { get; init; }
 
+    // Security identifiers
+    public string? Isin { get; init; }
+    public string? Cusip { get; init; }
+    public string? Sedol { get; init; }
+
+    // Company profile
+    public string? Description { get; init; }
+    public int? FullTimeEmployees { get; init; }
+
     // Price data
     public decimal? CurrentPrice { get; init; }
     public decimal? PreviousClose { get; init; }
