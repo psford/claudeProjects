@@ -115,6 +115,39 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 ---
 
+## .NET 8 Dependencies (stock_analyzer_dotnet)
+
+### Runtime
+
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| .NET SDK | 8.0.417 | Runtime and build tools |
+
+### NuGet Packages
+
+| Package | Version | Purpose | License |
+|---------|---------|---------|---------|
+| OoplesFinance.YahooFinanceAPI | 1.7.1 | Yahoo Finance data | MIT |
+| Microsoft.Extensions.Http | (transitive) | HTTP client factory | MIT |
+| Newtonsoft.Json | (transitive) | JSON serialization | MIT |
+
+### Frontend CDN Dependencies
+
+| Library | Version | Purpose | License |
+|---------|---------|---------|---------|
+| Tailwind CSS | CDN | Utility-first CSS | MIT |
+| Plotly.js | 2.27.0 | Interactive charts | MIT |
+
+### Project Structure
+
+| Project | Type | Purpose |
+|---------|------|---------|
+| StockAnalyzer.sln | Solution | Root solution file |
+| StockAnalyzer.Core | Class Library | Business logic, models, services |
+| StockAnalyzer.Api | Web API | REST endpoints, static file serving |
+
+---
+
 ## External Data Sources
 
 | Source | Used By | Notes |
@@ -127,6 +160,7 @@ Tracking all libraries, tools, and data dependencies used in this project.
 
 | Date | Change |
 |------|--------|
+| 01/15/2026 | Added C#/.NET 8 version with OoplesFinance, Tailwind CSS, Plotly.js |
 | 01/15/2026 | Added Docker Desktop, OWASP ZAP for DAST scanning |
 | 01/15/2026 | Added slack-bolt for Socket Mode listener; documented helper scripts |
 | 01/14/2026 | Added streamlit, plotly for web dashboard; added app.py |

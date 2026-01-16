@@ -490,11 +490,60 @@ Market Cap: $2.89T
 
 ---
 
-## 11. Version History
+---
+
+## 11. C#/.NET Version
+
+### 11.1 Overview
+
+The Stock Analyzer has a parallel C#/.NET 8 implementation with a modern HTML/CSS/JavaScript frontend. It provides the same core functionality with a different technology stack.
+
+### 11.2 Access
+
+| Version | URL | Technology |
+|---------|-----|------------|
+| Python (Streamlit) | http://localhost:8501 | Streamlit + Python |
+| .NET (Custom) | http://localhost:5000 | ASP.NET Core + Tailwind |
+
+### 11.3 Feature Parity
+
+| Feature | Python Version | .NET Version |
+|---------|----------------|--------------|
+| Stock info retrieval | Yes | Yes |
+| Historical OHLC data | Yes | Yes |
+| Ticker search | Yes | Yes (validation) |
+| Interactive Plotly charts | Yes | Yes |
+| Moving averages (20/50/200) | Yes | Yes |
+| Significant move detection | Yes | Yes |
+| News integration | Yes | Yes |
+| Dividend yield validation | Yes | Yes |
+
+### 11.4 UI Differences
+
+| Element | Python Version | .NET Version |
+|---------|----------------|--------------|
+| Framework | Streamlit widgets | Tailwind CSS |
+| Layout | Sidebar controls | Top search bar |
+| Charts | Plotly via Streamlit | Plotly.js direct |
+| Theming | Streamlit default | Custom Tailwind design |
+
+### 11.5 User Workflow (.NET Version)
+
+1. Open http://localhost:5000
+2. Enter ticker symbol in search box (e.g., "AAPL")
+3. Select time period from dropdown
+4. Click "Analyze" button
+5. View stock info, chart, metrics, news
+6. Toggle chart type and moving averages as needed
+
+---
+
+## 12. Version History
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2026-01-14 | Initial functional specification | Claude |
+| 2.0 | 2026-01-15 | Added C#/.NET version section with feature parity table | Claude |
 
 ---
 
