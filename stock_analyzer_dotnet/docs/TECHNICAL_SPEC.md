@@ -1,0 +1,629 @@
+# Technical Specification: Stock Analyzer Dashboard (.NET)
+
+**Version:** 1.0
+**Last Updated:** 2026-01-16
+**Author:** Claude (AI Assistant)
+**Status:** Production
+
+---
+
+## 1. Overview
+
+### 1.1 Purpose
+
+The Stock Analyzer Dashboard is a web-based application that provides interactive stock market analysis, visualization, and news integration. It enables users to research equity securities through charts, financial metrics, and news correlation for significant price movements.
+
+This document covers the **C#/.NET 8 implementation** with a custom HTML/CSS/JavaScript frontend using Tailwind CSS and Plotly.js.
+
+### 1.2 Scope
+
+This specification covers:
+- System architecture and component interactions
+- Data sources and API integrations
+- Deployment and runtime requirements
+- Configuration and environment setup
+- Troubleshooting procedures
+
+### 1.3 Glossary
+
+| Term | Definition |
+|------|------------|
+| OHLCV | Open, High, Low, Close, Volume - standard price data format |
+| SMA | Simple Moving Average - trend indicator calculated over N periods |
+| Ticker | Unique stock symbol (e.g., AAPL for Apple Inc.) |
+| Significant Move | Daily price change of ±3% or greater (configurable) |
+| Minimal APIs | ASP.NET Core lightweight API approach without controllers |
+| Finnhub | Third-party financial news API service |
+
+---
+
+## 2. System Architecture
+
+### 2.1 High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          User Browser                                │
+│                        (localhost:5000)                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     ASP.NET Core Web API                             │
+│                   (StockAnalyzer.Api)                                │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐ │
+│  │ wwwroot/       │  │ Minimal APIs   │  │ Static Files           │ │
+│  │ - index.html   │  │ - /api/stock/* │  │ - Tailwind CSS CDN     │ │
+│  │ - js/*.js      │  │ - /api/search  │  │ - Plotly.js CDN        │ │
+│  │               │  │ - /api/trending│  │                        │ │
+│  └────────────────┘  └────────────────┘  └────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    StockAnalyzer.Core Library                        │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │ Models:                    Services:                           │ │
+│  │ - StockInfo               - StockDataService (Yahoo Finance)   │ │
+│  │ - OhlcvData               - NewsService (Finnhub)              │ │
+│  │ - HistoricalDataResult    - AnalysisService (MAs, Volatility)  │ │
+│  │ - NewsItem/NewsResult     - SearchResult                       │ │
+│  │ - SignificantMove                                              │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┴───────────────┐
+                    ▼                               ▼
+┌────────────────────────────┐    ┌────────────────────────────────────┐
+│   OoplesFinance.Yahoo      │    │         Finnhub REST API           │
+│   FinanceAPI (NuGet)       │    │                                    │
+│                             │    │                                    │
+│  - GetSummaryDetailsAsync  │    │  - Company news                    │
+│  - GetHistoricalDataAsync  │    │  - News images                     │
+│  - GetTopTrendingStocks    │    │  - Article URLs                    │
+│                             │    │                                    │
+└────────────────────────────┘    └────────────────────────────────────┘
+         │
+         ▼
+┌────────────────────────────┐
+│  Yahoo Finance Search API  │
+│  (Direct HTTP Client)      │
+│                             │
+│  - Ticker search by name   │
+│  - Company name lookup     │
+└────────────────────────────┘
+```
+
+### 2.2 Component Description
+
+| Component | Location | Responsibility |
+|-----------|----------|----------------|
+| Web API | `StockAnalyzer.Api/Program.cs` | REST endpoints, static file serving |
+| Core Library | `StockAnalyzer.Core/` | Business logic, data models, services |
+| Frontend | `StockAnalyzer.Api/wwwroot/` | HTML/CSS/JS user interface |
+| Configuration | `appsettings.json` | API keys, environment settings |
+
+### 2.3 Technology Stack
+
+| Layer | Technology | Version/Notes |
+|-------|------------|---------------|
+| Runtime | .NET | 8.0 LTS |
+| Web Framework | ASP.NET Core Minimal APIs | Built-in |
+| Stock Data | OoplesFinance.YahooFinanceAPI | NuGet, MIT License |
+| Ticker Search | Yahoo Finance Search API | Direct HttpClient |
+| News Data | Finnhub REST API | Custom HttpClient |
+| Charting | Plotly.js | 2.27.0 (CDN) |
+| CSS Framework | Tailwind CSS | CDN |
+| Serialization | System.Text.Json | Built-in |
+
+---
+
+## 3. API Endpoints
+
+### 3.1 Endpoint Reference
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| `/api/stock/{ticker}` | GET | Stock information | `ticker`: Stock symbol |
+| `/api/stock/{ticker}/history` | GET | Historical OHLCV data | `ticker`, `period` (optional, default: 1y) |
+| `/api/stock/{ticker}/news` | GET | Company news | `ticker`, `days` (optional, default: 30) |
+| `/api/stock/{ticker}/significant` | GET | Significant price moves | `ticker`, `threshold` (optional, default: 3.0) |
+| `/api/stock/{ticker}/analysis` | GET | Performance metrics + MAs | `ticker`, `period` (optional) |
+| `/api/search` | GET | Ticker search | `q`: Search query (min 2 chars) |
+| `/api/trending` | GET | Trending stocks | `count` (optional, default: 10) |
+| `/api/health` | GET | Health check | None |
+
+### 3.2 Response Examples
+
+**GET /api/stock/AAPL**
+```json
+{
+  "symbol": "AAPL",
+  "shortName": "Apple Inc.",
+  "currentPrice": 198.50,
+  "previousClose": 197.25,
+  "dayHigh": 199.00,
+  "dayLow": 196.50,
+  "marketCap": 3050000000000,
+  "peRatio": 31.25,
+  "dividendYield": 0.0044,
+  "fiftyTwoWeekHigh": 199.62,
+  "fiftyTwoWeekLow": 164.08
+}
+```
+
+**GET /api/search?q=apple**
+```json
+{
+  "query": "apple",
+  "results": [
+    {
+      "symbol": "AAPL",
+      "shortName": "Apple Inc.",
+      "longName": "Apple Inc.",
+      "exchange": "NMS",
+      "type": "EQUITY",
+      "displayName": "AAPL - Apple Inc. (NMS)"
+    }
+  ]
+}
+```
+
+**GET /api/stock/AAPL/history?period=1mo**
+```json
+{
+  "symbol": "AAPL",
+  "period": "1mo",
+  "startDate": "2025-12-16",
+  "endDate": "2026-01-16",
+  "data": [
+    {
+      "date": "2025-12-16",
+      "open": 195.50,
+      "high": 197.00,
+      "low": 195.00,
+      "close": 196.75,
+      "volume": 45000000
+    }
+  ]
+}
+```
+
+---
+
+## 4. Data Models
+
+### 4.1 StockInfo
+
+```csharp
+public record StockInfo
+{
+    public required string Symbol { get; init; }
+    public string? ShortName { get; init; }
+    public string? LongName { get; init; }
+    public string? Sector { get; init; }
+    public string? Industry { get; init; }
+    public string? Currency { get; init; }
+    public string? Exchange { get; init; }
+
+    public decimal? CurrentPrice { get; init; }
+    public decimal? PreviousClose { get; init; }
+    public decimal? Open { get; init; }
+    public decimal? DayHigh { get; init; }
+    public decimal? DayLow { get; init; }
+    public long? Volume { get; init; }
+    public long? AverageVolume { get; init; }
+
+    public decimal? MarketCap { get; init; }
+    public decimal? PeRatio { get; init; }
+    public decimal? DividendYield { get; init; }
+    public decimal? FiftyTwoWeekHigh { get; init; }
+    public decimal? FiftyTwoWeekLow { get; init; }
+}
+```
+
+### 4.2 SearchResult
+
+```csharp
+public record SearchResult
+{
+    public required string Symbol { get; init; }
+    public required string ShortName { get; init; }
+    public string? LongName { get; init; }
+    public string? Exchange { get; init; }
+    public string? Type { get; init; }
+    public string DisplayName => $"{Symbol} - {ShortName}" +
+        (Exchange != null ? $" ({Exchange})" : "");
+}
+```
+
+### 4.3 OhlcvData
+
+```csharp
+public record OhlcvData
+{
+    public DateTime Date { get; init; }
+    public decimal Open { get; init; }
+    public decimal High { get; init; }
+    public decimal Low { get; init; }
+    public decimal Close { get; init; }
+    public long Volume { get; init; }
+    public decimal? AdjustedClose { get; init; }
+}
+```
+
+### 4.4 SignificantMove
+
+```csharp
+public record SignificantMove
+{
+    public DateTime Date { get; init; }
+    public decimal PercentChange { get; init; }
+    public decimal ClosePrice { get; init; }
+    public long Volume { get; init; }
+    public NewsItem? RelatedNews { get; init; }
+}
+```
+
+---
+
+## 5. Services
+
+### 5.1 StockDataService
+
+**File:** `StockAnalyzer.Core/Services/StockDataService.cs`
+
+| Method | Description |
+|--------|-------------|
+| `GetStockInfoAsync(symbol)` | Fetch stock info via OoplesFinance |
+| `GetHistoricalDataAsync(symbol, period)` | Fetch OHLCV history |
+| `SearchAsync(query)` | Search tickers via Yahoo Finance API |
+| `GetTrendingStocksAsync(count)` | Get trending stocks |
+
+**Search Implementation:**
+Uses direct HTTP call to Yahoo Finance Search API since OoplesFinance doesn't provide search:
+```
+https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=8&newsCount=0
+```
+
+### 5.2 NewsService
+
+**File:** `StockAnalyzer.Core/Services/NewsService.cs`
+
+| Method | Description |
+|--------|-------------|
+| `GetCompanyNewsAsync(symbol, fromDate)` | Fetch news from Finnhub |
+
+**Finnhub Endpoint:**
+```
+GET https://finnhub.io/api/v1/company-news?symbol={symbol}&from={date}&to={date}
+Header: X-Finnhub-Token: {api_key}
+```
+
+### 5.3 AnalysisService
+
+**File:** `StockAnalyzer.Core/Services/AnalysisService.cs`
+
+| Method | Description |
+|--------|-------------|
+| `CalculateMovingAverages(data)` | Calculate SMA-20, SMA-50, SMA-200 |
+| `CalculatePerformance(data)` | Calculate return, volatility, high/low |
+| `DetectSignificantMovesAsync(...)` | Find moves exceeding threshold |
+
+---
+
+## 6. Frontend Architecture
+
+### 6.1 File Structure
+
+```
+wwwroot/
+├── index.html          # Main page with Tailwind CSS layout
+└── js/
+    ├── api.js          # API client wrapper
+    ├── app.js          # Main application logic
+    └── charts.js       # Plotly chart configuration
+```
+
+### 6.2 JavaScript Modules
+
+**api.js** - REST API client:
+```javascript
+const API = {
+    baseUrl: '/api',
+    getStockInfo(ticker) { ... },
+    getHistory(ticker, period) { ... },
+    getAnalysis(ticker, period) { ... },
+    getSignificantMoves(ticker, threshold) { ... },
+    getNews(ticker, days) { ... },
+    search(query) { ... }
+};
+```
+
+**app.js** - Application controller:
+- Event binding (search, period change, chart type)
+- Autocomplete with debouncing (300ms)
+- Data rendering (stock info, metrics, news)
+- State management (currentTicker, historyData)
+
+**charts.js** - Plotly configuration:
+- Candlestick chart traces
+- Line chart traces
+- Moving average overlays
+- Responsive layout
+
+### 6.3 Autocomplete Flow
+
+```
+User types → 300ms debounce → API.search(query) → Show dropdown
+                                    ↓
+User clicks result → Populate input → Hide dropdown
+                                    ↓
+User clicks Analyze → analyzeStock() → Load all data
+```
+
+---
+
+## 7. Configuration
+
+### 7.1 Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FINNHUB_API_KEY` | Yes | Finnhub API authentication key |
+
+**Configuration Priority:**
+1. `appsettings.json` → `Finnhub:ApiKey`
+2. Environment variable `FINNHUB_API_KEY`
+
+### 7.2 appsettings.json
+
+```json
+{
+  "Finnhub": {
+    "ApiKey": "your_api_key_here"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
+```
+
+### 7.3 Program.cs Configuration
+
+```csharp
+// CORS for frontend
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// Service registration
+builder.Services.AddSingleton<StockDataService>();
+builder.Services.AddSingleton<NewsService>();
+builder.Services.AddSingleton<AnalysisService>();
+```
+
+---
+
+## 8. Deployment
+
+### 8.1 Prerequisites
+
+- .NET 8.0 SDK
+- Finnhub API key (free tier: https://finnhub.io/)
+
+### 8.2 Installation Steps
+
+```bash
+# 1. Navigate to project
+cd stock_analyzer_dotnet
+
+# 2. Configure API key (choose one method)
+# Option A: Set environment variable
+set FINNHUB_API_KEY=your_key_here
+
+# Option B: Edit appsettings.json
+# Add key under Finnhub:ApiKey
+
+# 3. Build the solution
+dotnet build
+
+# 4. Run the application
+dotnet run --project src/StockAnalyzer.Api
+
+# 5. Open browser
+# http://localhost:5000
+```
+
+### 8.3 File Structure
+
+```
+stock_analyzer_dotnet/
+├── StockAnalyzer.sln
+├── .gitignore
+├── docs/
+│   ├── FUNCTIONAL_SPEC.md
+│   └── TECHNICAL_SPEC.md
+├── src/
+│   ├── StockAnalyzer.Api/
+│   │   ├── Program.cs
+│   │   ├── appsettings.json
+│   │   ├── StockAnalyzer.Api.csproj
+│   │   └── wwwroot/
+│   │       ├── index.html
+│   │       └── js/
+│   │           ├── api.js
+│   │           ├── app.js
+│   │           └── charts.js
+│   └── StockAnalyzer.Core/
+│       ├── StockAnalyzer.Core.csproj
+│       ├── Models/
+│       │   ├── StockInfo.cs
+│       │   ├── HistoricalData.cs
+│       │   ├── NewsItem.cs
+│       │   ├── SearchResult.cs
+│       │   └── SignificantMove.cs
+│       └── Services/
+│           ├── StockDataService.cs
+│           ├── NewsService.cs
+│           └── AnalysisService.cs
+└── tests/
+```
+
+---
+
+## 9. Known Issues and Workarounds
+
+### 9.1 Dividend Yield Inconsistency
+
+**Issue:** Yahoo Finance returns dividend yield in inconsistent formats.
+
+**Workaround:** Validation in `StockDataService`:
+```csharp
+private static decimal? ValidateDividendYield(decimal? yield)
+{
+    if (!yield.HasValue) return null;
+    if (yield.Value > 0.10m)
+        return yield.Value / 100;  // Correct inflated value
+    return yield;
+}
+```
+
+### 9.2 OoplesFinance API Wrapper Types
+
+**Issue:** The library returns wrapper types with `Raw` properties instead of primitive values.
+
+**Workaround:** Reflection-based extraction:
+```csharp
+private static decimal? TryGetDecimal(object? value)
+{
+    if (value == null) return null;
+    var rawProp = value.GetType().GetProperty("Raw");
+    if (rawProp != null)
+    {
+        var rawValue = rawProp.GetValue(value);
+        if (rawValue is double d) return (decimal)d;
+    }
+    // Direct conversion fallback...
+}
+```
+
+### 9.3 Search Not in OoplesFinance
+
+**Issue:** OoplesFinance library doesn't provide ticker search functionality.
+
+**Workaround:** Direct HTTP call to Yahoo Finance search API in `SearchAsync()`.
+
+---
+
+## 10. Troubleshooting
+
+### 10.1 Application Won't Start
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Port 5000 already in use` | Another process using port | Kill process or change port in launchSettings.json |
+| `Unable to find package` | NuGet restore needed | Run `dotnet restore` |
+| Build errors | SDK version mismatch | Ensure .NET 8.0 SDK installed |
+
+### 10.2 No Data Displayed
+
+| Cause | Solution |
+|-------|----------|
+| Invalid ticker symbol | Verify ticker exists on Yahoo Finance |
+| Network connectivity | Check internet connection |
+| API rate limit | Wait and retry |
+
+### 10.3 News Not Loading
+
+| Cause | Solution |
+|-------|----------|
+| Missing API key | Check appsettings.json or environment variable |
+| API rate limit exceeded | Wait 1 minute (free tier: 60 req/min) |
+| Invalid API key | Verify key at https://finnhub.io/dashboard |
+
+### 10.4 Search Not Working
+
+| Cause | Solution |
+|-------|----------|
+| Query too short | Type at least 2 characters |
+| Yahoo Finance API down | Check Yahoo Finance directly |
+| Network timeout | Check connectivity, try again |
+
+---
+
+## 11. Security Considerations
+
+### 11.1 API Key Storage
+
+- API keys stored in `appsettings.json` (not committed to git)
+- `.gitignore` includes `appsettings.Development.json`
+- Production should use environment variables or secret management
+
+### 11.2 Data Privacy
+
+- No user data is stored or transmitted
+- All data requests are read-only
+- No authentication/login system
+
+### 11.3 Network Security
+
+- Default: localhost only (safe for development)
+- Production deployment should use HTTPS
+- CORS configured to allow any origin (restrict in production)
+
+---
+
+## 12. Performance Considerations
+
+### 12.1 Caching
+
+Currently no caching implemented. Each request fetches fresh data.
+
+**Future Enhancement:** Add `IMemoryCache` for API responses.
+
+### 12.2 API Rate Limits
+
+| Service | Limit | Impact |
+|---------|-------|--------|
+| Finnhub | 60/min | News fetching may fail under heavy use |
+| Yahoo Finance | Undocumented | Occasional request failures possible |
+
+### 12.3 Parallel Requests
+
+Frontend fetches all data in parallel for better performance:
+```javascript
+const [stockInfo, history, analysis, significantMoves, news] = await Promise.all([
+    API.getStockInfo(ticker),
+    API.getHistory(ticker, period),
+    API.getAnalysis(ticker, period),
+    API.getSignificantMoves(ticker, 3),
+    API.getNews(ticker, 30)
+]);
+```
+
+---
+
+## 13. Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-01-16 | Initial .NET technical specification |
+
+---
+
+## 14. References
+
+- [ASP.NET Core Minimal APIs](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis)
+- [OoplesFinance.YahooFinanceAPI](https://github.com/ooples/OoplesFinance.YahooFinanceAPI)
+- [Plotly.js Documentation](https://plotly.com/javascript/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Finnhub API Documentation](https://finnhub.io/docs/api)

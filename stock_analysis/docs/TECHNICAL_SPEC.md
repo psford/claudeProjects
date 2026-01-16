@@ -1,4 +1,4 @@
-# Technical Specification: Stock Analyzer Dashboard
+# Technical Specification: Stock Analyzer Dashboard (Python)
 
 **Version:** 1.0
 **Last Updated:** 2026-01-14
@@ -526,159 +526,16 @@ Currently no caching implemented. Each page refresh fetches fresh data.
 
 ---
 
----
-
-## 12. C#/.NET Version (stock_analyzer_dotnet)
-
-### 12.1 Overview
-
-A parallel implementation of the Stock Analyzer using modern C#/.NET 8 with a custom HTML/CSS/JavaScript frontend. Both versions run side-by-side (Python on :8501, .NET on :5000).
-
-### 12.2 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          User Browser                                │
-│                        (localhost:5000)                              │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     ASP.NET Core Web API                             │
-│                   (StockAnalyzer.Api)                                │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐ │
-│  │ wwwroot/       │  │ Minimal APIs   │  │ Static Files           │ │
-│  │ - index.html   │  │ - /api/stock/* │  │ - Tailwind CSS CDN     │ │
-│  │ - js/*.js      │  │ - /api/search  │  │ - Plotly.js CDN        │ │
-│  │ - css/*.css    │  │ - /api/trending│  │                        │ │
-│  └────────────────┘  └────────────────┘  └────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    StockAnalyzer.Core Library                        │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │ Models:                    Services:                           │ │
-│  │ - StockInfo               - StockDataService (Yahoo Finance)   │ │
-│  │ - OhlcvData               - NewsService (Finnhub)              │ │
-│  │ - HistoricalDataResult    - AnalysisService (MAs, Volatility)  │ │
-│  │ - NewsItem/NewsResult                                          │ │
-│  │ - SignificantMove                                              │ │
-│  └────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┴───────────────┐
-                    ▼                               ▼
-┌────────────────────────────┐    ┌────────────────────────────────────┐
-│   OoplesFinance.Yahoo      │    │         Finnhub REST API           │
-│   FinanceAPI (NuGet)       │    │                                    │
-│                             │    │                                    │
-│  - GetSummaryDetailsAsync  │    │  - Company news                    │
-│  - GetChartInfoAsync       │    │  - News images                     │
-│  - GetHistoricalDataAsync  │    │  - Article URLs                    │
-│  - GetKeyStatisticsAsync   │    │                                    │
-└────────────────────────────┘    └────────────────────────────────────┘
-```
-
-### 12.3 Technology Stack (.NET Version)
-
-| Layer | Technology | Version/Notes |
-|-------|------------|---------------|
-| Runtime | .NET | 8.0 |
-| Web Framework | ASP.NET Core Minimal APIs | Built-in |
-| Stock Data | OoplesFinance.YahooFinanceAPI | MIT License |
-| Charting | Plotly.js | 2.27.0 (CDN) |
-| CSS Framework | Tailwind CSS | CDN |
-| News API | Finnhub | Custom HttpClient |
-
-### 12.4 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/stock/{ticker}` | GET | Stock information |
-| `/api/stock/{ticker}/history?period=` | GET | Historical OHLCV data |
-| `/api/stock/{ticker}/news?days=` | GET | Company news |
-| `/api/stock/{ticker}/significant?threshold=` | GET | Significant moves |
-| `/api/stock/{ticker}/analysis?period=` | GET | Performance metrics + MAs |
-| `/api/search?q=` | GET | Ticker search by symbol or company name |
-| `/api/trending?count=` | GET | Trending stocks |
-| `/api/health` | GET | Health check |
-
-### 12.5 File Structure (.NET)
-
-```
-stock_analyzer_dotnet/
-├── StockAnalyzer.sln
-├── .gitignore
-├── src/
-│   ├── StockAnalyzer.Api/
-│   │   ├── Program.cs                 # Minimal API endpoints
-│   │   ├── appsettings.json           # Configuration
-│   │   ├── Properties/launchSettings.json
-│   │   └── wwwroot/
-│   │       ├── index.html             # Frontend dashboard
-│   │       └── js/
-│   │           ├── api.js             # API client
-│   │           ├── app.js             # Main app logic
-│   │           └── charts.js          # Plotly configuration
-│   └── StockAnalyzer.Core/
-│       ├── Models/
-│       │   ├── StockInfo.cs
-│       │   ├── HistoricalData.cs
-│       │   ├── NewsItem.cs
-│       │   └── SignificantMove.cs
-│       └── Services/
-│           ├── StockDataService.cs    # Yahoo Finance
-│           ├── NewsService.cs         # Finnhub
-│           └── AnalysisService.cs     # Calculations
-└── tests/                              # Future unit tests
-```
-
-### 12.6 Running the .NET Version
-
-```bash
-cd stock_analyzer_dotnet
-dotnet run --project src/StockAnalyzer.Api
-# Open http://localhost:5000
-```
-
-### 12.7 Environment Configuration
-
-Set `FINNHUB_API_KEY` in:
-- `appsettings.json` under `Finnhub:ApiKey`
-- Or environment variable `FINNHUB_API_KEY`
-
----
-
-## 13. Shared Utilities (shared/)
-
-### 13.1 Overview
-
-Shared helper scripts that work across both Python and .NET versions. Located in `claudeProjects/shared/`.
-
-### 13.2 Python Helpers (shared/python/)
-
-| Script | Purpose |
-|--------|---------|
-| `slack_notify.py` | Send Slack notifications |
-| `slack_listener.py` | Listen for Slack messages |
-| `checkpoint.py` | Session state checkpoints |
-| `archive_logs.py` | Log rotation/archiving |
-| `security_scan.py` | Bandit SAST wrapper |
-| `zap_scan.py` | OWASP ZAP DAST wrapper |
-
----
-
-## 14. Version History
+## 12. Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-01-14 | Initial technical specification |
-| 2.0 | 2026-01-15 | Added C#/.NET 8 version with custom frontend, shared utilities |
+| 1.1 | 2026-01-16 | Separated into Python-specific spec (.NET moved to separate doc) |
 
 ---
 
-## 13. References
+## 13. References (Python)
 
 - [Streamlit Documentation](https://docs.streamlit.io/)
 - [Plotly Python Documentation](https://plotly.com/python/)
