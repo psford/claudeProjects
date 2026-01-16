@@ -179,6 +179,7 @@ public class StockDataService
         var now = DateTime.Now;
         return period.ToLower() switch
         {
+            "ytd" => new DateTime(now.Year, 1, 1),
             "1d" => now.AddDays(-1),
             "5d" => now.AddDays(-5),
             "1mo" => now.AddMonths(-1),

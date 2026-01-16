@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.2
+**Version:** 1.3
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -94,7 +94,7 @@ The Stock Analyzer Dashboard allows users to:
 | ID | Requirement |
 |----|-------------|
 | FR-003.1 | The system must allow users to select the chart time period |
-| FR-003.2 | The system must support: 1 month, 3 months, 6 months, 1 year, 2 years, 5 years |
+| FR-003.2 | The system must support: YTD, 1 month, 3 months, 6 months, 1 year, 2 years, 5 years, 10 years |
 | FR-003.3 | The system must default to 1 year when first loading a stock |
 | FR-003.4 | The system must refresh the chart when the period is changed |
 
@@ -102,12 +102,14 @@ The Stock Analyzer Dashboard allows users to:
 
 | Selection | Data Range |
 |-----------|------------|
+| YTD | January 1st of current year to today |
 | 1mo | Last 30 calendar days |
 | 3mo | Last 90 calendar days |
 | 6mo | Last 180 calendar days |
 | 1y | Last 365 calendar days |
 | 2y | Last 730 calendar days |
 | 5y | Last 1,825 calendar days |
+| 10y | Last 3,650 calendar days |
 
 ### 3.4 Moving Averages (FR-004)
 

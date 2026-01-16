@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.4
+**Version:** 1.5
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -977,6 +977,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-01-16 | Added YTD and 10-year time periods to chart dropdown |
 | 1.4 | 2026-01-16 | Company profile integration: ISIN/CUSIP/SEDOL identifiers, company bio, Finnhub profile endpoint, OpenFIGI SEDOL lookup, chart legend/width fixes |
 | 1.3 | 2026-01-16 | Server-side ML image processing with YOLOv8n ONNX, ImageProcessingService, ImageCacheService, new /api/images/* endpoints |
 | 1.2 | 2026-01-16 | Added unit test documentation (Section 8), SRI for Plotly.js (Section 12.5) |
