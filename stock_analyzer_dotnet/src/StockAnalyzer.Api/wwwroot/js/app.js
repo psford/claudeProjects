@@ -6,6 +6,7 @@ const App = {
     currentTicker: null,
     currentPeriod: '1y',
     currentThreshold: 5,
+    currentAnimal: 'cats',
     historyData: null,
     analysisData: null,
     significantMovesData: null,
@@ -95,6 +96,13 @@ const App = {
 
         // Show markers toggle
         document.getElementById('show-markers').addEventListener('change', () => this.updateChart());
+
+        // Animal type toggle (cats vs dogs)
+        document.querySelectorAll('input[name="animal-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.currentAnimal = e.target.value;
+            });
+        });
     },
 
     /**
@@ -466,11 +474,18 @@ const App = {
             ? moveData.relatedNews[0]
             : null;
 
-        if (news) {
-            // Show kitten image (Finnhub images are just publisher logos)
-            // Use cataas.com (Cat as a Service) with cache-busting for variety
+        // Get image URL based on selected animal type
+        const getAnimalImageUrl = () => {
             const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
-            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
+            if (this.currentAnimal === 'dogs') {
+                return `https://placedog.net/320/150?id=${cacheBuster}`;
+            }
+            return `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
+        };
+
+        if (news) {
+            // Show animal image (Finnhub images are just publisher logos)
+            image.src = getAnimalImageUrl();
             image.classList.remove('hidden');
             placeholder.classList.add('hidden');
             image.onerror = () => {
@@ -489,9 +504,8 @@ const App = {
             const newsDate = new Date(news.publishedAt);
             sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
         } else {
-            // No news available - still show a kitten
-            const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
-            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
+            // No news available - still show an animal
+            image.src = getAnimalImageUrl();
             image.classList.remove('hidden');
             placeholder.classList.add('hidden');
             image.onerror = () => {

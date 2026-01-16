@@ -84,12 +84,9 @@ Production deployment should address these warnings. Low priority for local deve
 | Chart markers | Triangle markers for significant moves | **Complete** |
 | Wikipedia-style popups | Hover popups with news thumbnails | **Complete** |
 | Configurable threshold | Slider to adjust significant move threshold (3-10%) | **Complete** |
+| Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnail images | **Complete** |
 
 ### Planned
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnail images | Planned |
 | Image recognition for thumbnails | Use image recognition to ensure cat/dog faces are visible in frame | Planned |
 | Hosting research | Identify free/cheap options to host the app online | Planned |
 | SRI for CDN scripts | Subresource Integrity hashes | Planned |
@@ -101,6 +98,7 @@ Production deployment should address these warnings. Low priority for local deve
 
 | Date | Change |
 |------|--------|
+| 01/16/2026 | Completed: Cats vs Dogs toggle for popup thumbnails (using placedog.net) |
 | 01/16/2026 | Completed: .NET chart markers and Wikipedia-style hover popups with news |
 | 01/16/2026 | Completed: .NET ticker search autocomplete, security headers |
 | 01/15/2026 | Completed: Pre-commit hooks (Bandit, detect-secrets, file hygiene) |
