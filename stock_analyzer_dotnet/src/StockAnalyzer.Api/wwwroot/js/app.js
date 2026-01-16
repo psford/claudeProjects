@@ -468,10 +468,9 @@ const App = {
 
         if (news) {
             // Show kitten image (Finnhub images are just publisher logos)
-            // Use placekitten.com with slight dimension variation for variety
-            const kittenWidth = 320;
-            const kittenHeight = 140 + Math.floor(Math.random() * 20); // 140-160px
-            image.src = `https://placekitten.com/${kittenWidth}/${kittenHeight}`;
+            // Use cataas.com (Cat as a Service) with cache-busting for variety
+            const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
+            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
             image.classList.remove('hidden');
             placeholder.classList.add('hidden');
             image.onerror = () => {
@@ -491,9 +490,8 @@ const App = {
             sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
         } else {
             // No news available - still show a kitten
-            const kittenWidth = 320;
-            const kittenHeight = 140 + Math.floor(Math.random() * 20);
-            image.src = `https://placekitten.com/${kittenWidth}/${kittenHeight}`;
+            const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
+            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
             image.classList.remove('hidden');
             placeholder.classList.add('hidden');
             image.onerror = () => {
