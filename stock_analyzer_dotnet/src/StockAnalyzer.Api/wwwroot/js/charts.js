@@ -11,7 +11,14 @@ const Charts = {
      * @param {Object} options - Chart options
      */
     renderStockChart(elementId, historyData, analysisData, options = {}) {
-        const { chartType = 'candlestick', showMa20 = true, showMa50 = true, showMa200 = false } = options;
+        const {
+            chartType = 'candlestick',
+            showMa20 = true,
+            showMa50 = true,
+            showMa200 = false,
+            significantMoves = null,
+            showMarkers = true
+        } = options;
 
         const data = historyData.data;
         const dates = data.map(d => d.date);
@@ -88,6 +95,70 @@ const Charts = {
                     y: ma200,
                     name: 'SMA 200',
                     line: { color: '#EC4899', width: 1, dash: 'dot' }
+                });
+            }
+        }
+
+        // Add significant move markers
+        if (showMarkers && significantMoves && significantMoves.moves && significantMoves.moves.length > 0) {
+            const moves = significantMoves.moves;
+            const threshold = significantMoves.threshold || 5;
+
+            // Separate positive and negative moves
+            const upMoves = moves.filter(m => m.isPositive);
+            const downMoves = moves.filter(m => !m.isPositive);
+
+            // Green markers for positive moves (positioned above the high)
+            if (upMoves.length > 0) {
+                // Find corresponding high prices for positioning
+                const upY = upMoves.map(m => {
+                    const dateStr = m.date.split('T')[0];
+                    const dataPoint = data.find(d => d.date.startsWith(dateStr));
+                    return dataPoint ? dataPoint.high * 1.02 : m.closePrice * 1.02;
+                });
+
+                traces.push({
+                    type: 'scatter',
+                    mode: 'markers',
+                    x: upMoves.map(m => m.date.split('T')[0]),
+                    y: upY,
+                    name: `+${threshold}% Move`,
+                    marker: {
+                        color: '#10B981',
+                        size: 14,
+                        symbol: 'triangle-up',
+                        line: { color: '#065F46', width: 1 }
+                    },
+                    customdata: upMoves,
+                    hoverinfo: 'skip',
+                    showlegend: true
+                });
+            }
+
+            // Red markers for negative moves (positioned below the low)
+            if (downMoves.length > 0) {
+                // Find corresponding low prices for positioning
+                const downY = downMoves.map(m => {
+                    const dateStr = m.date.split('T')[0];
+                    const dataPoint = data.find(d => d.date.startsWith(dateStr));
+                    return dataPoint ? dataPoint.low * 0.98 : m.closePrice * 0.98;
+                });
+
+                traces.push({
+                    type: 'scatter',
+                    mode: 'markers',
+                    x: downMoves.map(m => m.date.split('T')[0]),
+                    y: downY,
+                    name: `-${threshold}% Move`,
+                    marker: {
+                        color: '#EF4444',
+                        size: 14,
+                        symbol: 'triangle-down',
+                        line: { color: '#991B1B', width: 1 }
+                    },
+                    customdata: downMoves,
+                    hoverinfo: 'skip',
+                    showlegend: true
                 });
             }
         }

@@ -136,3 +136,17 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 ### Commits Today
 1. `885c22c` - Add guideline #34: Building ≠ Running
 2. `a161054` - Fix ticker search to support company name autocomplete
+
+### Session Continuation (context compaction recovery #2)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Added guidelines #35-36 (plan files, git recovery) | Success |
+| - | Created CLAUDE.md backup (claude_01162026-1.md) | Success |
+| - | Implemented chart markers for significant moves | Success |
+| - | Added threshold slider (3-10%) to UI | Success |
+| - | Added Wikipedia-style hover card HTML | Success |
+| - | Added marker traces to charts.js | Success |
+| - | Added hover card logic to app.js | Success |
+| - | Built and tested .NET app | Success |
+| - | API returns TSLA significant moves (20 at 5%) | Success |

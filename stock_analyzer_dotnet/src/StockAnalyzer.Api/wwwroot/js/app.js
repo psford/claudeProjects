@@ -5,9 +5,12 @@
 const App = {
     currentTicker: null,
     currentPeriod: '1y',
+    currentThreshold: 5,
     historyData: null,
     analysisData: null,
+    significantMovesData: null,
     searchTimeout: null,
+    hoverTimeout: null,
 
     /**
      * Initialize the application
@@ -74,6 +77,22 @@ const App = {
         ['ma-20', 'ma-50', 'ma-200'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => this.updateChart());
         });
+
+        // Threshold slider
+        const thresholdSlider = document.getElementById('threshold-slider');
+        const thresholdValue = document.getElementById('threshold-value');
+        thresholdSlider.addEventListener('input', (e) => {
+            this.currentThreshold = parseInt(e.target.value);
+            thresholdValue.textContent = `${this.currentThreshold}%`;
+        });
+        thresholdSlider.addEventListener('change', async () => {
+            if (this.currentTicker) {
+                await this.refreshSignificantMoves();
+            }
+        });
+
+        // Show markers toggle
+        document.getElementById('show-markers').addEventListener('change', () => this.updateChart());
     },
 
     /**
@@ -167,17 +186,19 @@ const App = {
                 API.getStockInfo(ticker),
                 API.getHistory(ticker, this.currentPeriod),
                 API.getAnalysis(ticker, this.currentPeriod),
-                API.getSignificantMoves(ticker, 3),
+                API.getSignificantMoves(ticker, this.currentThreshold),
                 API.getNews(ticker, 30)
             ]);
 
             this.historyData = history;
             this.analysisData = analysis;
+            this.significantMovesData = significantMoves;
 
             this.renderStockInfo(stockInfo);
             this.renderKeyMetrics(stockInfo);
             this.renderPerformance(analysis.performance);
             this.renderChart();
+            this.attachChartHoverListeners();
             this.renderSignificantMoves(significantMoves);
             this.renderNews(news);
 
@@ -313,7 +334,9 @@ const App = {
             chartType: document.getElementById('chart-type').value,
             showMa20: document.getElementById('ma-20').checked,
             showMa50: document.getElementById('ma-50').checked,
-            showMa200: document.getElementById('ma-200').checked
+            showMa200: document.getElementById('ma-200').checked,
+            significantMoves: this.significantMovesData,
+            showMarkers: document.getElementById('show-markers').checked
         };
 
         Charts.renderStockChart('stock-chart', this.historyData, this.analysisData, options);
@@ -325,7 +348,163 @@ const App = {
     updateChart() {
         if (this.historyData) {
             this.renderChart();
+            this.attachChartHoverListeners();
         }
+    },
+
+    /**
+     * Refresh significant moves with new threshold
+     */
+    async refreshSignificantMoves() {
+        if (!this.currentTicker) return;
+
+        try {
+            this.significantMovesData = await API.getSignificantMoves(
+                this.currentTicker,
+                this.currentThreshold
+            );
+            this.renderChart();
+            this.attachChartHoverListeners();
+            this.renderSignificantMoves(this.significantMovesData);
+        } catch (error) {
+            console.error('Failed to refresh significant moves:', error);
+        }
+    },
+
+    /**
+     * Attach Plotly hover event listeners for significant move markers
+     */
+    attachChartHoverListeners() {
+        const plot = document.getElementById('stock-chart');
+        if (!plot) return;
+
+        // Remove existing listeners by getting fresh reference
+        plot.removeAllListeners?.('plotly_hover');
+        plot.removeAllListeners?.('plotly_unhover');
+
+        plot.on('plotly_hover', (data) => {
+            const point = data.points[0];
+            // Check if this is a marker trace (significant move)
+            if (point.data.name && point.data.name.includes('Move') && point.customdata) {
+                if (this.hoverTimeout) clearTimeout(this.hoverTimeout);
+                this.hoverTimeout = setTimeout(() => {
+                    this.showHoverCard(data.event, point.customdata);
+                }, 200);
+            }
+        });
+
+        plot.on('plotly_unhover', () => {
+            if (this.hoverTimeout) {
+                clearTimeout(this.hoverTimeout);
+                this.hoverTimeout = null;
+            }
+            this.hideHoverCard();
+        });
+    },
+
+    /**
+     * Show Wikipedia-style hover card for significant move
+     */
+    showHoverCard(event, moveData) {
+        const card = document.getElementById('wiki-hover-card');
+        const image = document.getElementById('wiki-hover-image');
+        const placeholder = document.getElementById('wiki-hover-placeholder');
+        const dateEl = document.getElementById('wiki-hover-date');
+        const returnEl = document.getElementById('wiki-hover-return');
+        const headlineEl = document.getElementById('wiki-hover-headline');
+        const summaryEl = document.getElementById('wiki-hover-summary');
+        const sourceEl = document.getElementById('wiki-hover-source');
+
+        // Format date
+        const moveDate = new Date(moveData.date);
+        dateEl.textContent = moveDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Format return
+        const isPositive = moveData.percentChange >= 0;
+        returnEl.textContent = `${isPositive ? '+' : ''}${moveData.percentChange.toFixed(2)}% ${moveData.magnitude} move`;
+        returnEl.className = `text-sm font-bold mb-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`;
+
+        // Check for related news
+        const news = moveData.relatedNews && moveData.relatedNews.length > 0
+            ? moveData.relatedNews[0]
+            : null;
+
+        if (news) {
+            // Show news image or placeholder
+            if (news.imageUrl) {
+                image.src = news.imageUrl;
+                image.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                image.onerror = () => {
+                    image.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                };
+            } else {
+                image.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+
+            // Populate news content
+            headlineEl.textContent = news.headline;
+            headlineEl.href = news.url || '#';
+            headlineEl.style.display = 'block';
+
+            summaryEl.textContent = news.summary || '';
+            summaryEl.style.display = news.summary ? 'block' : 'none';
+
+            const newsDate = new Date(news.publishedAt);
+            sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
+        } else {
+            // No news available
+            image.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+
+            headlineEl.textContent = 'No related news found';
+            headlineEl.href = '#';
+            headlineEl.style.display = 'block';
+
+            summaryEl.textContent = 'No news articles were found for this date range.';
+            summaryEl.style.display = 'block';
+
+            sourceEl.textContent = '';
+        }
+
+        // Position the card near the cursor
+        const x = event.clientX || event.pageX;
+        const y = event.clientY || event.pageY;
+        const cardWidth = 320;
+        const cardHeight = 280;
+        const padding = 15;
+
+        let left = x + padding;
+        let top = y - cardHeight / 2;
+
+        // Keep within viewport
+        if (left + cardWidth > window.innerWidth) {
+            left = x - cardWidth - padding;
+        }
+        if (top < padding) {
+            top = padding;
+        }
+        if (top + cardHeight > window.innerHeight) {
+            top = window.innerHeight - cardHeight - padding;
+        }
+
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+        card.classList.remove('hidden');
+    },
+
+    /**
+     * Hide the hover card
+     */
+    hideHoverCard() {
+        document.getElementById('wiki-hover-card').classList.add('hidden');
     },
 
     /**
