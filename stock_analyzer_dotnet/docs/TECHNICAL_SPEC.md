@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.0
+**Version:** 1.1
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -34,6 +34,8 @@ This specification covers:
 | Significant Move | Daily price change of ±3% or greater (configurable) |
 | Minimal APIs | ASP.NET Core lightweight API approach without controllers |
 | Finnhub | Third-party financial news API service |
+| Dog CEO API | Third-party random dog image API |
+| cataas | Cat as a Service - random cat image API |
 
 ---
 
@@ -92,6 +94,18 @@ This specification covers:
 │  - Ticker search by name   │
 │  - Company name lookup     │
 └────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                     External Image APIs (Frontend)                   │
+│  ┌────────────────────────────┐    ┌────────────────────────────┐  │
+│  │   Dog CEO API              │    │   cataas.com               │  │
+│  │   (dog.ceo)                │    │   (Cat as a Service)       │  │
+│  │                             │    │                             │  │
+│  │  - /api/breeds/image/      │    │  - /cat?width=320&height=  │  │
+│  │    random/{count}          │    │    150&{cacheBuster}       │  │
+│  │  - Returns JSON with URLs  │    │  - Returns direct image    │  │
+│  └────────────────────────────┘    └────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Component Description
@@ -345,6 +359,8 @@ const API = {
 - Autocomplete with debouncing (300ms)
 - Data rendering (stock info, metrics, news)
 - State management (currentTicker, historyData)
+- Image cache management (prefetch, refill, consume)
+- Hover card display with cached images
 
 **charts.js** - Plotly configuration:
 - Candlestick chart traces
@@ -361,6 +377,55 @@ User clicks result → Populate input → Hide dropdown
                                     ↓
 User clicks Analyze → analyzeStock() → Load all data
 ```
+
+### 6.4 Image Caching System
+
+The application pre-caches animal images for instant display in hover popups.
+
+**Cache Configuration:**
+```javascript
+imageCache: {
+    cats: [],           // Array of pre-loaded cat image URLs
+    dogs: [],           // Array of pre-loaded dog image URLs
+    isRefilling: { cats: false, dogs: false }  // Prevent concurrent refills
+},
+IMAGE_CACHE_SIZE: 50,       // Number of images to fetch per refill
+IMAGE_CACHE_THRESHOLD: 10   // Trigger refill when cache drops below this
+```
+
+**Cache Flow:**
+```
+Page Load → prefetchImages()
+                ↓
+    ┌───────────┴───────────┐
+    ↓                       ↓
+fetchDogImages(50)    fetchCatImages(50)
+    ↓                       ↓
+Dog CEO API           Generate cataas URLs
+/random/50                  ↓
+    ↓               Preload into browser
+Preload into browser        ↓
+    ↓               Add to imageCache.cats
+Add to imageCache.dogs
+```
+
+**Image Consumption:**
+```
+Hover on marker → getImageFromCache(type)
+                        ↓
+                  Remove URL from cache (no repeats)
+                        ↓
+                  Check cache.length < 10?
+                        ↓ Yes
+                  Trigger background refill
+```
+
+**External APIs:**
+
+| API | Endpoint | Response | Notes |
+|-----|----------|----------|-------|
+| Dog CEO | `GET /api/breeds/image/random/50` | JSON with 50 URLs | Single request for batch |
+| cataas | `GET /cat?width=320&height=150&{ts}` | Direct JPEG image | Cache-busted URLs |
 
 ---
 
@@ -580,15 +645,40 @@ private static decimal? TryGetDecimal(object? value)
 - Production deployment should use HTTPS
 - CORS configured to allow any origin (restrict in production)
 
+### 11.4 Content Security Policy
+
+The application uses CSP headers to restrict resource loading:
+
+```
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly;
+  style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
+  img-src 'self' data: https:;
+  font-src 'self' https:;
+  connect-src 'self' https://dog.ceo
+```
+
+| Directive | Allowed Sources | Purpose |
+|-----------|-----------------|---------|
+| `script-src` | CDN for Tailwind, Plotly | Chart and styling libraries |
+| `img-src` | `https:` | Allow images from any HTTPS source (cataas, dog.ceo images) |
+| `connect-src` | `'self'`, `dog.ceo` | API calls to backend and Dog CEO API |
+
 ---
 
 ## 12. Performance Considerations
 
 ### 12.1 Caching
 
-Currently no caching implemented. Each request fetches fresh data.
-
+**Backend:** Currently no caching implemented. Each request fetches fresh data.
 **Future Enhancement:** Add `IMemoryCache` for API responses.
+
+**Frontend Image Caching:**
+- 50 cat + 50 dog images pre-loaded on page init
+- Images stored in browser memory for instant display
+- Automatic refill when cache drops below 10 images
+- Each image used once to ensure variety
 
 ### 12.2 API Rate Limits
 
@@ -616,6 +706,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-01-16 | Added image caching system, Dog CEO API, CSP configuration |
 | 1.0 | 2026-01-16 | Initial .NET technical specification |
 
 ---
@@ -627,3 +718,5 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 - [Plotly.js Documentation](https://plotly.com/javascript/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [Finnhub API Documentation](https://finnhub.io/docs/api)
+- [Dog CEO API Documentation](https://dog.ceo/dog-api/documentation/)
+- [Cat as a Service (cataas)](https://cataas.com/)

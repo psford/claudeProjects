@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.0
+**Version:** 1.1
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -143,6 +143,11 @@ The Stock Analyzer Dashboard allows users to:
 | FR-005.8 | The hover popup must show: date, return %, news headline, summary, source, and thumbnail |
 | FR-005.9 | The hover popup headline must be a clickable link to the full news article |
 | FR-005.10 | The hover popup must remain visible when the user moves their mouse to interact with it |
+| FR-005.11 | The system must allow users to choose between cat or dog images for popup thumbnails |
+| FR-005.12 | The system must pre-cache 50 images of each type on page load for instant display |
+| FR-005.13 | The system must automatically refill the image cache when it drops below 10 images |
+| FR-005.14 | The system must use each cached image only once (no repeats) |
+| FR-005.15 | The system must clear the previous image when hiding the popup to prevent flash |
 
 **Calculation Method:** Daily return = (Today's Close - Today's Open) / Today's Open
 
@@ -251,6 +256,9 @@ The Stock Analyzer Dashboard allows users to:
 | SMA-20 | Checkbox | On/Off | On |
 | SMA-50 | Checkbox | On/Off | On |
 | SMA-200 | Checkbox | On/Off | Off |
+| Threshold | Slider | 3% - 10% | 5% |
+| Show Markers | Checkbox | On/Off | On |
+| Popup Thumbnails | Radio | Cats, Dogs | Cats |
 | Analyze | Button | Click to load data | - |
 
 ### 4.3 Color Scheme
@@ -400,6 +408,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.1 | 2026-01-16 | Added cats/dogs toggle (FR-005.11), image pre-caching (FR-005.12-15) | Claude |
 | 1.0 | 2026-01-16 | Initial .NET functional specification | Claude |
 
 ---
