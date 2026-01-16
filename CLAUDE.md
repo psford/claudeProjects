@@ -59,6 +59,7 @@ My background is a longtime financial services business analyst, who has program
     - **Warning signs:** Tool output truncation, summarization occurring, very long conversation
     - **Graceful exit protocol:** Warn user, complete current atomic task, save checkpoint, commit, update log
 31. Document scan/audit findings: When running security scans (SAST, DAST) or other audits, add findings to ROADMAP.md. Include issue description, severity, and recommended fix. This ensures nothing is forgotten and provides a clear remediation backlog.
+32. Keep whileYouWereAway.md (WYA) updated: When completing tasks from WYA, mark them done immediately with a brief summary of what was accomplished. This keeps the task queue accurate and provides context for future sessions.
 
 # known issues
 
