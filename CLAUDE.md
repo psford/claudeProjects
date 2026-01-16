@@ -48,6 +48,7 @@ My background is a longtime financial services business analyst, who has program
     - **Output:** Prefer flat-file results that can be read without additional API calls
     - Always err on the side of building reusable infrastructure
 25. Proactive Slack listener management: If the Slack listener is not receiving messages or appears disconnected, restart it without asking. Check inbox status and restart the listener proactively to maintain two-way communication.
+26. Clarify correction vs inquiry: If the user asks "Did you do X?" and the answer is no, ask whether they would like this added as a guideline. The user may be inquiring or correcting—don't assume which.
 
 # known issues
 
