@@ -31,6 +31,7 @@ Planned features and improvements for the claudeProjects codebase.
 | News sentiment analysis | Integrate news API with sentiment scoring | Planned |
 | Options chain analysis | Options data retrieval and Greeks calculation | Planned |
 | Backtesting framework | Simple strategy backtesting capability | Planned |
+| Image recognition for thumbnails | Ensure cat/dog faces are visible in popup images | Future |
 
 ---
 
@@ -87,7 +88,6 @@ Production deployment should address these warnings. Low priority for local deve
 | Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnail images | **Complete** |
 
 ### Planned
-| Image recognition for thumbnails | Use image recognition to ensure cat/dog faces are visible in frame | Planned |
 | Hosting research | Identify free/cheap options to host the app online | Planned |
 | SRI for CDN scripts | Subresource Integrity hashes | Planned |
 | Unit tests | xUnit test suite | Planned |
