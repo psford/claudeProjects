@@ -206,3 +206,10 @@ ZAP Warnings (informational):
 | - | Updated showHoverCard() with getAnimalImageUrl() helper | Success |
 | - | Built and tested .NET app | Success |
 | - | Updated ROADMAP.md with completed feature | Success |
+| - | Fixed placedog.net URL (removed ?id= prefix) | Failed - same image every time |
+| - | Switched to Dog CEO API for random dogs | Failed - purple box (async issue) |
+| - | Fixed async setAnimalImage function | Failed - CSP blocking fetch |
+| - | Added dog.ceo to CSP connect-src | Success - dogs now work with random images |
+| - | Researched free hosting options | Success - Oracle Cloud best option |
+| - | Created DEPLOYMENT_ORACLE.md guide | Success |
+| - | Created Dockerfile and docker-compose.yml | Success |
