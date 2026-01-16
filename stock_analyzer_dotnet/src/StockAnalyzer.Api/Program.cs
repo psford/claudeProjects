@@ -44,6 +44,32 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+
+// Security headers middleware
+app.Use(async (context, next) =>
+{
+    // Anti-clickjacking
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    // Prevent MIME type sniffing
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    // XSS protection (legacy browsers)
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    // Referrer policy
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    // Permissions policy
+    context.Response.Headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
+    // Content Security Policy - allow CDN scripts for Tailwind and Plotly
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly; " +
+        "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' https:; " +
+        "connect-src 'self'";
+
+    await next();
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
