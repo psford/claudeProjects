@@ -183,3 +183,6 @@ ZAP Warnings (informational):
 | - | Updated guideline #22 - rules files are sacrosanct | Success |
 | - | Added guideline #37 - proactive guideline updates from feedback | Success |
 | - | Replaced Finnhub publisher logos with kitten images in hover popups | Success |
+| - | placekitten.com integration | **FAILED** - service was down (521), didn't test before integrating |
+| - | Switched to cataas.com for kitten images | Success |
+| - | Added guideline #38 - test external services before integrating | Success |

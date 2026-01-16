@@ -76,6 +76,12 @@ My background is a longtime financial services business analyst, who has program
     - **Atomic operations:** When replacing file contents, prefer edit operations over full rewrites when possible
     - **Principle:** The user should always be able to recover any previous version of any file
 37. Proactive guideline updates: When the user provides feedback, evaluate whether it should become a guideline. If the feedback would improve future results or prevent repeated issues, add it to CLAUDE.md without being asked. Use judgment—not every comment needs to be a rule, but patterns and corrections should be captured.
+38. Test external services before integrating: When adding code that depends on an external web service, API, or URL:
+    - **Verify the service is operational** before writing integration code (use WebFetch or equivalent)
+    - **Check the response** is what you expect (correct content-type, valid data, no errors)
+    - **Have a fallback plan** if the service is unreliable or goes down
+    - **Never assume** a service works based on documentation or past experience—test it now
+    - This applies to: CDNs, placeholder image services, APIs, webhooks, any external dependency
 
 # known issues
 
