@@ -41,8 +41,23 @@ Planned features and improvements for the claudeProjects codebase.
 | Feature | Description | Status |
 |---------|-------------|--------|
 | Static Analysis (SAST) | Bandit security scanner for Python code | **Complete** |
+| Dynamic Analysis (DAST) | OWASP ZAP via Docker | **Complete** |
 | Pre-commit hooks | Block commits with security issues | Planned |
-| Dynamic Analysis (DAST) | Runtime security testing | Planned |
+
+### Security Headers (from ZAP scan 01/15/2026)
+
+Production deployment should address these warnings. Low priority for local development.
+
+| Header | Issue | Fix |
+|--------|-------|-----|
+| X-Frame-Options | Missing anti-clickjacking | Add `DENY` or `SAMEORIGIN` |
+| X-Content-Type-Options | Missing nosniff | Add `nosniff` header |
+| Content-Security-Policy | CSP not set | Define allowed sources |
+| Permissions-Policy | Not set | Restrict browser features |
+| Server | Version leak (Tornado) | Strip or customize header |
+| Cross-Origin-Opener-Policy | Spectre isolation | Add COOP/COEP headers |
+
+**Note:** These require a reverse proxy (nginx) or Streamlit middleware. Not applicable for localhost development.
 
 ### DevOps
 
@@ -59,6 +74,7 @@ Planned features and improvements for the claudeProjects codebase.
 
 | Date | Change |
 |------|--------|
+| 01/15/2026 | Completed: DAST (ZAP); added security headers section from scan results |
 | 01/14/2026 | Completed: Interactive charts (Plotly) and Web dashboard (Streamlit) |
 | 01/14/2026 | Initial roadmap created; added Plotly interactive charts to high priority |
 
