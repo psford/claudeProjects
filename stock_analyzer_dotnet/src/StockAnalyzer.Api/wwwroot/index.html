@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analyzer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Plotly.js for charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        success: '#10B981',
+                        danger: '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3B82F6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+    <div class="min-h-full">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        <h1 class="text-2xl font-bold text-gray-900">Stock Analyzer</h1>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Powered by .NET 8 + Plotly.js
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <!-- Search Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <label for="ticker-input" class="block text-sm font-medium text-gray-700 mb-1">
+                            Enter Stock Ticker
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="ticker-input"
+                                class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary uppercase"
+                                placeholder="AAPL, MSFT, GOOGL..."
+                                autocomplete="off">
+                            <div id="search-loader" class="absolute right-3 top-2.5 hidden">
+                                <div class="loader"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sm:w-48">
+                        <label for="period-select" class="block text-sm font-medium text-gray-700 mb-1">
+                            Time Period
+                        </label>
+                        <select id="period-select"
+                            class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                            <option value="1mo">1 Month</option>
+                            <option value="3mo">3 Months</option>
+                            <option value="6mo">6 Months</option>
+                            <option value="1y" selected>1 Year</option>
+                            <option value="2y">2 Years</option>
+                            <option value="5y">5 Years</option>
+                        </select>
+                    </div>
+                    <div class="sm:w-48">
+                        <label for="chart-type" class="block text-sm font-medium text-gray-700 mb-1">
+                            Chart Type
+                        </label>
+                        <select id="chart-type"
+                            class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                            <option value="candlestick">Candlestick</option>
+                            <option value="line">Line</option>
+                        </select>
+                    </div>
+                    <div class="sm:self-end">
+                        <button id="search-btn"
+                            class="w-full sm:w-auto px-6 py-2 bg-primary text-white font-medium rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
+                            Analyze
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Moving Averages Toggle -->
+                <div class="mt-4 flex flex-wrap gap-4">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" id="ma-20" class="rounded border-gray-300 text-primary focus:ring-primary" checked>
+                        <span class="ml-2 text-sm text-gray-700">SMA 20</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" id="ma-50" class="rounded border-gray-300 text-primary focus:ring-primary" checked>
+                        <span class="ml-2 text-sm text-gray-700">SMA 50</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" id="ma-200" class="rounded border-gray-300 text-primary focus:ring-primary">
+                        <span class="ml-2 text-sm text-gray-700">SMA 200</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Results Section (hidden until search) -->
+            <div id="results-section" class="hidden">
+                <!-- Stock Info Card -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div id="stock-info" class="flex items-start justify-between">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+                        <div id="key-metrics" class="space-y-3">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                    <div id="stock-chart" style="height: 500px;"></div>
+                </div>
+
+                <!-- Performance & Significant Moves -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Performance</h3>
+                        <div id="performance-metrics" class="space-y-3">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Significant Moves (>3%)</h3>
+                        <div id="significant-moves" class="space-y-2 max-h-64 overflow-y-auto">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- News -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent News</h3>
+                    <div id="news-list" class="space-y-4">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-section" class="hidden">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                    <svg class="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Stock Data</h3>
+                    <p id="error-message" class="text-red-600"></p>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-section" class="hidden">
+                <div class="flex items-center justify-center py-12">
+                    <div class="text-center">
+                        <div class="loader mx-auto mb-4" style="width: 48px; height: 48px;"></div>
+                        <p class="text-gray-600">Loading stock data...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+                <p class="text-sm text-gray-500 text-center">
+                    Stock Analyzer &copy; 2026 | Data from Yahoo Finance & Finnhub
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
