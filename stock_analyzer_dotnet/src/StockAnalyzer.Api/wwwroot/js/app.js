@@ -15,12 +15,123 @@ const App = {
     hideTimeout: null,
     isHoverCardHovered: false,
 
+    // Image cache for pre-loaded animal images
+    imageCache: {
+        cats: [],
+        dogs: [],
+        isRefilling: { cats: false, dogs: false }
+    },
+    IMAGE_CACHE_SIZE: 50,
+    IMAGE_CACHE_THRESHOLD: 10,
+
     /**
      * Initialize the application
      */
     init() {
         this.bindEvents();
         this.checkApiHealth();
+        this.prefetchImages();
+    },
+
+    /**
+     * Prefetch animal images on page load
+     */
+    async prefetchImages() {
+        console.log('Prefetching animal images...');
+        await Promise.all([
+            this.fetchDogImages(this.IMAGE_CACHE_SIZE),
+            this.fetchCatImages(this.IMAGE_CACHE_SIZE)
+        ]);
+        console.log(`Image cache ready: ${this.imageCache.dogs.length} dogs, ${this.imageCache.cats.length} cats`);
+    },
+
+    /**
+     * Fetch multiple dog images from Dog CEO API
+     */
+    async fetchDogImages(count) {
+        if (this.imageCache.isRefilling.dogs) return;
+        this.imageCache.isRefilling.dogs = true;
+
+        try {
+            const response = await fetch(`https://dog.ceo/api/breeds/image/random/${count}`);
+            const data = await response.json();
+            if (data.status === 'success' && Array.isArray(data.message)) {
+                // Preload images into browser cache
+                const preloadPromises = data.message.map(url => this.preloadImage(url));
+                await Promise.allSettled(preloadPromises);
+                this.imageCache.dogs.push(...data.message);
+                console.log(`Fetched ${data.message.length} dog images (total: ${this.imageCache.dogs.length})`);
+            }
+        } catch (e) {
+            console.error('Failed to fetch dog images:', e);
+        } finally {
+            this.imageCache.isRefilling.dogs = false;
+        }
+    },
+
+    /**
+     * Generate and preload cat image URLs from cataas.com
+     */
+    async fetchCatImages(count) {
+        if (this.imageCache.isRefilling.cats) return;
+        this.imageCache.isRefilling.cats = true;
+
+        try {
+            const urls = [];
+            const baseTime = Date.now();
+            for (let i = 0; i < count; i++) {
+                // Generate unique URLs with cache busters
+                urls.push(`https://cataas.com/cat?width=320&height=150&${baseTime + i}`);
+            }
+
+            // Preload images into browser cache
+            const preloadPromises = urls.map(url => this.preloadImage(url));
+            await Promise.allSettled(preloadPromises);
+            this.imageCache.cats.push(...urls);
+            console.log(`Fetched ${urls.length} cat images (total: ${this.imageCache.cats.length})`);
+        } catch (e) {
+            console.error('Failed to fetch cat images:', e);
+        } finally {
+            this.imageCache.isRefilling.cats = false;
+        }
+    },
+
+    /**
+     * Preload an image into browser cache
+     */
+    preloadImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(url);
+            img.onerror = () => reject(url);
+            img.src = url;
+        });
+    },
+
+    /**
+     * Get an image from cache, removing it so it won't be reused
+     * Triggers background refill if cache is running low
+     */
+    getImageFromCache(type) {
+        const cache = this.imageCache[type];
+        if (cache.length === 0) {
+            return null;
+        }
+
+        // Take the first image and remove it from cache
+        const url = cache.shift();
+
+        // Check if we need to refill
+        if (cache.length < this.IMAGE_CACHE_THRESHOLD) {
+            console.log(`${type} cache low (${cache.length}), refilling...`);
+            if (type === 'dogs') {
+                this.fetchDogImages(this.IMAGE_CACHE_SIZE);
+            } else {
+                this.fetchCatImages(this.IMAGE_CACHE_SIZE);
+            }
+        }
+
+        return url;
     },
 
     /**
@@ -474,40 +585,46 @@ const App = {
             ? moveData.relatedNews[0]
             : null;
 
-        // Get image URL based on selected animal type
-        const setAnimalImage = async () => {
-            const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
-
+        // Get image URL from cache (instant, no fetch delay)
+        const setAnimalImage = () => {
             // Set up error handler
             image.onerror = () => {
                 image.classList.add('hidden');
                 placeholder.classList.remove('hidden');
             };
 
-            if (this.currentAnimal === 'dogs') {
-                // Dog CEO API returns JSON with random dog image URL
-                try {
-                    const response = await fetch('https://dog.ceo/api/breeds/image/random');
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        image.src = data.message;
-                        image.classList.remove('hidden');
-                        placeholder.classList.add('hidden');
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Failed to fetch dog image:', e);
-                }
-                // Fallback to placeholder on error
-                image.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-                return;
-            }
+            // Try to get image from cache
+            const cachedUrl = this.getImageFromCache(this.currentAnimal);
 
-            // Cats - direct URL works
-            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
-            image.classList.remove('hidden');
-            placeholder.classList.add('hidden');
+            if (cachedUrl) {
+                // Use cached image (already preloaded, so instant)
+                image.src = cachedUrl;
+                image.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                // Cache empty - fallback to direct fetch (shouldn't happen often)
+                console.warn(`${this.currentAnimal} cache empty, fetching directly...`);
+                if (this.currentAnimal === 'dogs') {
+                    fetch('https://dog.ceo/api/breeds/image/random')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                image.src = data.message;
+                                image.classList.remove('hidden');
+                                placeholder.classList.add('hidden');
+                            }
+                        })
+                        .catch(() => {
+                            image.classList.add('hidden');
+                            placeholder.classList.remove('hidden');
+                        });
+                } else {
+                    const cacheBuster = Date.now();
+                    image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
+                    image.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                }
+            }
         };
 
         if (news) {
@@ -582,7 +699,16 @@ const App = {
      * Hide the hover card
      */
     hideHoverCard() {
-        document.getElementById('wiki-hover-card').classList.add('hidden');
+        const card = document.getElementById('wiki-hover-card');
+        const image = document.getElementById('wiki-hover-image');
+        const placeholder = document.getElementById('wiki-hover-placeholder');
+
+        card.classList.add('hidden');
+
+        // Clear the image to prevent flash of old image on next show
+        image.src = '';
+        image.classList.add('hidden');
+        placeholder.classList.remove('hidden');
     },
 
     /**

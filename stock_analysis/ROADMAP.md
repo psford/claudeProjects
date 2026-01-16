@@ -87,6 +87,7 @@ Production deployment should address these warnings. Low priority for local deve
 | Configurable threshold | Slider to adjust significant move threshold (3-10%) | **Complete** |
 | Cats vs Dogs toggle | Radio button to choose cats or dogs for thumbnail images | **Complete** |
 | Hosting research | Oracle Cloud deployment guide with Dockerfile | **Complete** |
+| Image pre-caching | Pre-load 50 cats/dogs on page load, auto-refill when low | **Complete** |
 
 ### Planned
 | SRI for CDN scripts | Subresource Integrity hashes | Planned |
@@ -98,6 +99,7 @@ Production deployment should address these warnings. Low priority for local deve
 
 | Date | Change |
 |------|--------|
+| 01/16/2026 | Completed: Image pre-caching system (50 cats/dogs, auto-refill) |
 | 01/16/2026 | Completed: Oracle Cloud deployment guide with Dockerfile and docker-compose |
 | 01/16/2026 | Completed: Cats vs Dogs toggle for popup thumbnails (using Dog CEO API) |
 | 01/16/2026 | Completed: .NET chart markers and Wikipedia-style hover popups with news |

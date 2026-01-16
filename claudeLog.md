@@ -213,3 +213,6 @@ ZAP Warnings (informational):
 | - | Researched free hosting options | Success - Oracle Cloud best option |
 | - | Created DEPLOYMENT_ORACLE.md guide | Success |
 | - | Created Dockerfile and docker-compose.yml | Success |
+| - | Implemented image pre-caching (50 cats, 50 dogs on load) | Success |
+| - | Added auto-refill when cache below 10 images | Success |
+| - | Fixed hover card image flash (clear on hide) | Success |
