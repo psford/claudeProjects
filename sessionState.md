@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/14/2026
+# Session State - Last Updated 01/15/2026
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -27,12 +27,20 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ### Python
 - **Version:** 3.10.11
-- **Core packages:** yfinance, pandas, numpy, mplfinance, streamlit, plotly, finnhub-python, python-dotenv, streamlit-searchbox
+- **Core packages:** yfinance, pandas, numpy, mplfinance, streamlit, plotly, finnhub-python, python-dotenv, streamlit-searchbox, bandit, slack-sdk, slack-bolt
 
 ### Streamlit Server
-- **Status:** Running in background (task b809410)
+- **Status:** May be running in background
 - **URL:** http://localhost:8501
-- **Note:** May need to restart if computer was rebooted
+- **Note:** Restart if needed with `streamlit run stock_analysis/app.py`
+
+### Slack Integration
+- **Status:** OPERATIONAL
+- **Workspace:** psforddigitaldesign.slack.com
+- **Channel:** #claude-notifications
+- **Send:** `python helpers/slack_notify.py "message"`
+- **Receive:** `python helpers/slack_listener.py` (background process)
+- **Check inbox:** `python helpers/slack_listener.py --check`
 
 ---
 
@@ -41,19 +49,22 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ```
 claudeProjects/
 ├── .git/                    # Local git repository
-├── .gitignore               # Excludes tokens, .env, credentials
-├── .env                     # API keys (FINNHUB_API_KEY) - gitignored
-├── CLAUDE.md                # Guidelines and known issues (21 guidelines)
+├── .gitignore               # Excludes tokens, .env, credentials, logs
+├── .env                     # API keys (FINNHUB, SLACK tokens) - gitignored
+├── CLAUDE.md                # Guidelines and known issues (24 guidelines)
 ├── claudeLog.md             # Terminal action log
 ├── sessionState.md          # This file
 ├── dependencies.md          # Package and tool dependencies
 ├── ROADMAP.md               # Future enhancements roadmap
 ├── whileYouWereAway.md      # Task queue for rate-limited periods
-├── claude_01132026-*.md     # Versioned backups (7 from 01/13)
-├── claude_01142026-*.md     # Versioned backups (4 from 01/14)
+├── claude_01*.md            # Versioned CLAUDE.md backups
 ├── docs/
 │   ├── TECHNICAL_SPEC.md    # System architecture, APIs, troubleshooting
 │   └── FUNCTIONAL_SPEC.md   # Business requirements, data mappings
+├── helpers/
+│   ├── security_scan.py     # SAST scanner wrapper (Bandit)
+│   ├── slack_notify.py      # Send Slack notifications
+│   └── slack_listener.py    # Receive Slack messages (Socket Mode)
 └── stock_analysis/
     ├── stock_analyzer.py    # Core analysis + charting + news functions
     └── app.py               # Streamlit web dashboard
@@ -71,6 +82,9 @@ claudeProjects/
 19. **Enhancement tracking** - Document in ROADMAP.md
 20. **Step-by-step evaluation** - Stop after each task for user review
 21. **Guideline adherence** - Regularly refer back, update as needed
+22. **Context window efficiency** - Hot/cold storage; only load data when needed
+23. **Check web before asking** - Search for syntax/best practices before asking user
+24. **Local helper code** - Write reusable tools in helpers/, Unix philosophy
 
 ---
 
@@ -91,7 +105,7 @@ claudeProjects/
 - Ticker search with autocomplete (yfinance Search API)
 - Interactive Plotly charts (Candlestick, Line)
 - Moving average overlays (20, 50, 200-day)
-- Significant move markers (±5% daily change)
+- Significant move markers (+/-5% daily change)
 - News integration (Finnhub + yfinance) with relevance scoring
 - Company info, price data, key metrics display
 - Performance summary (return, volatility, high/low)
@@ -102,67 +116,50 @@ claudeProjects/
   - JavaScript injection approach attempted but not functional
   - Code is in place but hover card does not appear
   - DO NOT REFACTOR - needs investigation in next session
-  - Reference: Wikipedia Page Previews for design inspiration
-
-### Key Files
-- `stock_analysis/app.py` - Streamlit web interface
-- `stock_analysis/stock_analyzer.py` - Core analysis module
-
-### Key Functions in stock_analyzer.py
-- `search_tickers(query)` - Autocomplete search
-- `get_stock_info(ticker)` - Company info with validated dividend yield
-- `get_historical_data(ticker, period)` - OHLCV data
-- `create_plotly_candlestick(ticker, period, ...)` - Interactive chart
-- `create_plotly_line(ticker, period, ...)` - Line chart
-- `get_news_for_dates(ticker, dates)` - Batch news fetch
-- `get_significant_moves_with_news(ticker, period)` - Moves + news
-- `_score_news_relevance(headline, ticker)` - Prioritize stock-specific news
 
 ---
 
-## API Keys
+## Completed Tasks (01/15/2026)
 
-- **Finnhub:** Stored in `.env` as `FINNHUB_API_KEY`
-- **Rate limit:** 60 requests/minute (free tier)
+| Task | Description | Result |
+|------|-------------|--------|
+| 1 | SAST static analyzer | Bandit installed, helpers/security_scan.py created |
+| 2 | Context window guideline | Added as guideline #22 |
+| 3 | Local helper code guideline | Added as guideline #24, helpers/ folder created |
+| 5 | rules.md cleanup | Empty file deleted |
+| 4 | Remote communication (Slack) | Full two-way integration via #claude-notifications |
 
 ---
 
-## Git History (Recent - 01/14/2026)
+## Pending Tasks (from whileYouWereAway.md)
+
+| # | Task | Status |
+|---|------|--------|
+| 6 | DAST suggestions | Pending |
+| 7 | "As a user" guideline | Pending |
+| 8 | User stories from roadmap | Pending |
+| 9 | Log archiving script | Pending |
+| 10 | C#/.NET fork | Pending (moved to end) |
+
+### Future (from ROADMAP.md)
+- Technical indicators (RSI, MACD, Bollinger Bands)
+- Multi-stock comparison chart
+- Portfolio tracker
+- Export to Excel
+- Unit tests
+- Wikipedia-style hover previews (BLOCKED - not working)
+
+---
+
+## Git History (Recent - 01/15/2026)
 
 | Hash | Description |
 |------|-------------|
-| 5f8491b | Add documentation specs and Wikipedia-style hover previews |
-| ed7fda6 | Combine multiple news sources with relevance scoring |
-| 3fe11f5 | Add commit freely guideline (#16) |
-| 907ea6c | Add news panel with thumbnails and clickable links |
-| bb981de | Add news headlines to significant move markers |
-| 862ceed | Add markers for significant daily price moves (5%+) |
-
----
-
-## Pending Tasks
-
-### Immediate - Wikipedia Hover (BLOCKED)
-- [ ] **Wikipedia-style hover previews on chart markers - NOT WORKING, NEEDS FIX**
-
-### New Tasks (from whileYouWereAway.md - added 01/14/2026)
-1. [ ] **Static analyzer (SAST)** - Find open-source solution, plan implementation, enforce pre-merge scanning
-2. [ ] **Guideline: Context window efficiency** - Hot/cold storage approach, only load needed data
-3. [ ] **Guideline: Local helper code** - Write reusable tools, reduce API calls, `helpers/` folder, Unix modular style
-4. [ ] **C#/.NET fork** - Recreate entire project in C#/.NET, new folder structure, handle all testing
-5. [ ] **Remote communication** - Evaluate iMessage/SMS/email for remote collaboration, build app if needed
-6. [x] **Remove rules.md** - DONE (file was empty, deleted)
-7. [ ] **Dynamic analysis (DAST) suggestions** - Security tooling recommendations for SDLC
-8. [ ] **Guideline: "As a user" prompts** - Auto-add to functional requirements
-9. [ ] **User stories from roadmap** - Proper format, acceptance criteria, epics
-10. [ ] **Log archiving script** - Archive logs >14 days when >1GB, run on startup/shutdown
-
-### Future (from ROADMAP.md)
-- [ ] Technical indicators (RSI, MACD, Bollinger Bands)
-- [ ] Multi-stock comparison chart
-- [ ] Portfolio tracker
-- [ ] Export to Excel
-- [ ] Unit tests
+| 7e40171 | Add Slack listener for two-way communication |
+| 09bd277 | Add Slack integration for remote notifications |
+| 425a053 | Add guidelines #22-24 (Tasks 2-3) |
+| b20cbc2 | Add Bandit SAST security scanner |
+| 92668db | Remove empty rules.md file |
 
 ---
 
@@ -173,7 +170,7 @@ claudeProjects/
 Then:
 1. Check if Streamlit server is running: `curl http://localhost:8501`
 2. If not, start it: `streamlit run stock_analysis/app.py`
-3. Check `whileYouWereAway.md` for new tasks
-4. Resume work on Wikipedia-style hover previews (NOT WORKING)
+3. Check `whileYouWereAway.md` for tasks
+4. Continue with Task 6 (DAST suggestions)
 
 **Say "night!"** at end of session to save state.
