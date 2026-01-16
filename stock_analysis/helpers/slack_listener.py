@@ -31,6 +31,11 @@ load_dotenv(env_path)
 
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+import logging
+
+# Enable debug logging for slack_bolt
+logging.basicConfig(level=logging.DEBUG)
+slack_logger = logging.getLogger("slack_bolt")
 
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -138,6 +143,7 @@ def create_app() -> App:
         raise ValueError("SLACK_BOT_TOKEN not found in environment")
 
     app = App(token=bot_token)
+    log("App created with bot token")
 
     # Listen for messages in channels the bot is in
     @app.event("message")
