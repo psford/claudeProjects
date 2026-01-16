@@ -1,6 +1,6 @@
 # Deploying Stock Analyzer to Oracle Cloud Free Tier
 
-This guide walks through deploying the .NET 8 Stock Analyzer app to Oracle Cloud Infrastructure (OCI) Always Free tier using Docker.
+This guide walks through deploying the .NET 8 Stock Analyzer app to Oracle Cloud Infrastructure (OCI) Always Free tier using Docker on Ubuntu.
 
 ---
 
@@ -24,6 +24,22 @@ Oracle's free tier is the most generous and doesn't expire.
 - Credit card (for verification only - won't be charged for Always Free resources)
 - Basic familiarity with Linux command line
 - SSH client (built into Windows 10+, macOS, Linux)
+
+---
+
+## Recommended OS: Ubuntu 22.04 LTS
+
+This guide uses **Ubuntu 22.04 LTS (Jammy Jellyfish)** for the following reasons:
+
+| Factor | Ubuntu 22.04 LTS |
+|--------|------------------|
+| Support | Until April 2027 |
+| ARM64 | Excellent support |
+| Docker | Official packages available |
+| Documentation | Extensive community resources |
+| Stability | Battle-tested in production |
+
+**Alternative:** Ubuntu 24.04 LTS is also available with support until 2029, but 22.04 has more established documentation and proven stability.
 
 ---
 
@@ -58,7 +74,8 @@ Oracle's free tier is the most generous and doesn't expire.
 
 1. Click **Edit** in the "Image and shape" section
 2. Click **Change image**
-   - Select **Oracle Linux 8** (or Ubuntu if preferred)
+   - Click **Ubuntu** in the image list
+   - Select **Canonical Ubuntu 22.04** (aarch64 version for ARM)
    - Click **Select image**
 3. Click **Change shape**
    - Select **Ampere** (ARM processor)
@@ -128,17 +145,14 @@ Click **Add Ingress Rules** for each.
 # Fix key permissions (required on first use)
 chmod 400 oracle-vm-key.key
 
-# Connect (Oracle Linux uses 'opc' user)
-ssh -i oracle-vm-key.key opc@<PUBLIC_IP>
-
-# For Ubuntu image, use 'ubuntu' user instead:
-# ssh -i oracle-vm-key.key ubuntu@<PUBLIC_IP>
+# Connect (Ubuntu uses 'ubuntu' user)
+ssh -i oracle-vm-key.key ubuntu@<PUBLIC_IP>
 ```
 
 On Windows (PowerShell):
 ```powershell
 # Connect
-ssh -i oracle-vm-key.key opc@<PUBLIC_IP>
+ssh -i oracle-vm-key.key ubuntu@<PUBLIC_IP>
 ```
 
 ---
@@ -149,12 +163,21 @@ Run these commands on the VM:
 
 ```bash
 # Update system
-sudo dnf update -y
+sudo apt update && sudo apt upgrade -y
+
+# Install prerequisites
+sudo apt install -y ca-certificates curl gnupg lsb-release
+
+# Add Docker's official GPG key
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Install Docker
-sudo dnf install -y dnf-utils
-sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 # Start Docker
 sudo systemctl start docker
@@ -240,7 +263,7 @@ cd stock-analyzer/stock_analyzer_dotnet
 Option B - Using SCP:
 ```bash
 # On local machine
-scp -i oracle-vm-key.key -r ./stock_analyzer_dotnet opc@<PUBLIC_IP>:~/
+scp -i oracle-vm-key.key -r ./stock_analyzer_dotnet ubuntu@<PUBLIC_IP>:~/
 ```
 
 ### 6.4 Configure API Keys
@@ -273,14 +296,32 @@ docker ps
 
 ### 6.6 Configure Firewall
 
-Oracle Linux has firewalld enabled by default:
+Ubuntu uses `iptables` by default on Oracle Cloud. Open the required port:
+
 ```bash
 # Open port 5000
-sudo firewall-cmd --permanent --add-port=5000/tcp
-sudo firewall-cmd --reload
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 5000 -j ACCEPT
+
+# Save the rules to persist across reboots
+sudo netfilter-persistent save
+```
+
+Alternatively, you can use `ufw` (Uncomplicated Firewall):
+```bash
+# Install ufw if not present
+sudo apt install -y ufw
+
+# Allow SSH (important - do this first!)
+sudo ufw allow 22/tcp
+
+# Allow app port
+sudo ufw allow 5000/tcp
+
+# Enable firewall
+sudo ufw enable
 
 # Verify
-sudo firewall-cmd --list-ports
+sudo ufw status
 ```
 
 ---
@@ -309,9 +350,11 @@ Caddy automatically obtains and renews SSL certificates:
 
 ```bash
 # Install Caddy
-sudo dnf install -y 'dnf-command(copr)'
-sudo dnf copr enable @caddy/caddy -y
-sudo dnf install -y caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install -y caddy
 
 # Create Caddyfile
 sudo tee /etc/caddy/Caddyfile << 'EOF'
@@ -320,10 +363,14 @@ yourdomain.com {
 }
 EOF
 
-# Open HTTPS ports in firewall
-sudo firewall-cmd --permanent --add-service=http
-sudo firewall-cmd --permanent --add-service=https
-sudo firewall-cmd --reload
+# Open HTTPS ports in firewall (using iptables)
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+
+# Or using ufw:
+# sudo ufw allow 80/tcp
+# sudo ufw allow 443/tcp
 
 # Start Caddy
 sudo systemctl enable caddy
@@ -385,7 +432,7 @@ docker compose logs
 
 ### Can't connect from browser
 1. Check OCI security list has ingress rule for port 5000
-2. Check VM firewall: `sudo firewall-cmd --list-ports`
+2. Check VM firewall: `sudo iptables -L INPUT -n` or `sudo ufw status`
 3. Check container is running: `docker ps`
 
 ### Out of memory
@@ -393,6 +440,7 @@ Reduce container memory or use smaller VM shape.
 
 ### SSH connection refused
 - Verify public IP is correct
+- Ensure you're using `ubuntu` user: `ssh -i oracle-vm-key.key ubuntu@<IP>`
 - Check security list has port 22 open (default)
 - Verify key file permissions: `chmod 400 oracle-vm-key.key`
 
