@@ -52,6 +52,12 @@ My background is a longtime financial services business analyst, who has program
 27. Test end-to-end, not just startup: When implementing two-way communication or any system with input/output, verify the full round-trip works—not just that the service starts. For the Slack listener: send a test message, then confirm it appears in the inbox. A running process is not proof of functionality.
 28. Redeploy after committing: When code changes are committed, ask the user if running services should be restarted to deploy the new code. A commit without redeployment leaves old code running.
 29. Use PowerShell fully: When working in PowerShell, leverage its full functionality for local processing. Prefer local commands over API calls to minimize token usage.
+30. Checkpoint system for graceful session ending: Save state periodically during long sessions to enable recovery if the session ends unexpectedly or approaches token limits.
+    - **When to checkpoint:** After completing major tasks, every 10-15 exchanges, or before starting complex multi-step work
+    - **How:** Run `python helpers/checkpoint.py save "description"` or manually update sessionState.md
+    - **Headroom:** Reserve ~5,000-6,000 tokens for graceful exit (state save, commit, log update)
+    - **Warning signs:** Tool output truncation, summarization occurring, very long conversation
+    - **Graceful exit protocol:** Warn user, complete current atomic task, save checkpoint, commit, update log
 
 # known issues
 

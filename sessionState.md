@@ -4,6 +4,18 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ---
 
+<!-- CHECKPOINT_START -->
+## Checkpoint (Auto-saved)
+
+**Last checkpoint:** 2026-01-15 22:55:55
+
+**Current state:** Implementing checkpoint system - guideline #30 added, helper script created
+
+**Recovery:** If session ended unexpectedly, this checkpoint indicates where work was interrupted. Resume from here.
+
+<!-- CHECKPOINT_END -->
+
+
 ## User Profile
 
 - **Name:** Patrick (psford)

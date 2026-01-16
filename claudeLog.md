@@ -61,6 +61,10 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Started Slack listener in background | Success (connected) |
 | - | Reorganized folder structure | Success |
 | - | Moved helpers/, docs/, ROADMAP.md, dependencies.md, .env into stock_analysis/ | Success |
+| - | Fixed Slack listener dual-connection issue | Success |
+| - | Added guidelines #25-29 (Slack, testing, PowerShell) | Success |
+| - | Created helpers/checkpoint.py | Success |
+| - | Added guideline #30 (checkpoint system) | Success |
 
 ---
 
