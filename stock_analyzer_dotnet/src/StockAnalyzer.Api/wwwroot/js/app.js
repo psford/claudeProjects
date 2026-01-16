@@ -475,23 +475,44 @@ const App = {
             : null;
 
         // Get image URL based on selected animal type
-        const getAnimalImageUrl = () => {
+        const setAnimalImage = async () => {
             const cacheBuster = Date.now() + Math.floor(Math.random() * 1000);
-            if (this.currentAnimal === 'dogs') {
-                return `https://placedog.net/320/150?${cacheBuster}`;
-            }
-            return `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
-        };
 
-        if (news) {
-            // Show animal image (Finnhub images are just publisher logos)
-            image.src = getAnimalImageUrl();
-            image.classList.remove('hidden');
-            placeholder.classList.add('hidden');
+            // Set up error handler
             image.onerror = () => {
                 image.classList.add('hidden');
                 placeholder.classList.remove('hidden');
             };
+
+            if (this.currentAnimal === 'dogs') {
+                // Dog CEO API returns JSON with random dog image URL
+                try {
+                    const response = await fetch('https://dog.ceo/api/breeds/image/random');
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        image.src = data.message;
+                        image.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch dog image:', e);
+                }
+                // Fallback to placeholder on error
+                image.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                return;
+            }
+
+            // Cats - direct URL works
+            image.src = `https://cataas.com/cat?width=320&height=150&${cacheBuster}`;
+            image.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        };
+
+        if (news) {
+            // Show animal image (Finnhub images are just publisher logos)
+            setAnimalImage();
 
             // Populate news content
             headlineEl.textContent = news.headline;
@@ -505,13 +526,7 @@ const App = {
             sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
         } else {
             // No news available - still show an animal
-            image.src = getAnimalImageUrl();
-            image.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-            image.onerror = () => {
-                image.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-            };
+            setAnimalImage();
 
             headlineEl.textContent = 'No related news found';
             headlineEl.href = '#';

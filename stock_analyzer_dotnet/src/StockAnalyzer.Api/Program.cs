@@ -65,7 +65,7 @@ app.Use(async (context, next) =>
         "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; " +
         "img-src 'self' data: https:; " +
         "font-src 'self' https:; " +
-        "connect-src 'self'";
+        "connect-src 'self' https://dog.ceo";
 
     await next();
 });
