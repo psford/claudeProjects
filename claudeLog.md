@@ -157,3 +157,10 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 | - | Verified Wikipedia-style hover popups working with news thumbnails | Success |
 | - | Updated FUNCTIONAL_SPEC.md with new FR-005 requirements | Success |
 | - | Cleaned up debug console.log statements | Success |
+| - | Added appsettings.Development.json to .gitignore | Success |
+| - | Updated ROADMAP.md with .NET completed features | Success |
+| - | Committed all changes | Success (1969ca6) |
+
+### Commits Today (continued)
+3. `1506678` - Add chart markers and hover popups for significant moves
+4. `1969ca6` - Complete Wikipedia-style hover popups for significant moves
