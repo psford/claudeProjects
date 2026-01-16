@@ -79,6 +79,7 @@ My background is a longtime financial services business analyst, who has program
     - This applies to: CDNs, placeholder image services, APIs, webhooks, any external dependency
 39. Slack message confirmation: When completing a task received via Slack, add a ✅ reaction to the original message to confirm completion. This provides visual feedback in the Slack channel.
 40. Review security tools on new frameworks: Any time a new framework or language is introduced, review SAST and DAST tools to ensure adequate coverage. Add new scanners if needed (e.g., SecurityCodeScan for C#, Bandit for Python).
+41. Keep specs updated: When adding or modifying features, update FUNCTIONAL_SPEC.md (user-facing requirements) and TECHNICAL_SPEC.md (architecture, APIs, implementation details) along with ROADMAP.md and claudeLog.md.
 
 # deployment
 

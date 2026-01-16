@@ -78,13 +78,14 @@ claudeProjects/
 
 ## Guidelines Summary
 
-**Total:** 40 general guidelines + 5 deployment rules
+**Total:** 41 general guidelines + 5 deployment rules
 
 **Key guidelines:**
 - **#15** Test before completion
 - **#22** Context efficiency (rules files are sacrosanct)
 - **#37** Proactive guideline updates from feedback
 - **#38** Test external services before integrating
+- **#41** Keep specs updated (FUNCTIONAL_SPEC.md, TECHNICAL_SPEC.md)
 
 **Deployment rules (new section):**
 - **D1** Kill before deploy - terminate old processes first
