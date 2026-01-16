@@ -42,7 +42,7 @@ Planned features and improvements for the claudeProjects codebase.
 |---------|-------------|--------|
 | Static Analysis (SAST) | Bandit security scanner for Python code | **Complete** |
 | Dynamic Analysis (DAST) | OWASP ZAP via Docker | **Complete** |
-| Pre-commit hooks | Block commits with security issues | Planned |
+| Pre-commit hooks | Block commits with security issues | **Complete** |
 
 ### Security Headers (from ZAP scan 01/15/2026)
 
@@ -74,7 +74,7 @@ Production deployment should address these warnings. Low priority for local deve
 
 | Date | Change |
 |------|--------|
+| 01/15/2026 | Completed: Pre-commit hooks (Bandit, detect-secrets, file hygiene) |
 | 01/15/2026 | Completed: DAST (ZAP); added security headers section from scan results |
 | 01/14/2026 | Completed: Interactive charts (Plotly) and Web dashboard (Streamlit) |
 | 01/14/2026 | Initial roadmap created; added Plotly interactive charts to high priority |
-

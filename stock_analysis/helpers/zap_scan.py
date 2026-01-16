@@ -163,7 +163,7 @@ def check_target_reachable(url: str):
     import urllib.error
 
     try:
-        urllib.request.urlopen(url, timeout=5)
+        urllib.request.urlopen(url, timeout=5)  # nosec B310 - URL from user/config
         return True
     except urllib.error.URLError:
         return False

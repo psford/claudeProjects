@@ -1,0 +1,15 @@
+# Project configuration
+# Used by various tools including Bandit
+
+[tool.bandit]
+# Exclude test files and virtual environments
+exclude_dirs = ["tests", "venv", ".venv", "node_modules"]
+
+# Skip specific checks if needed (none for now)
+# skips = ["B101"]  # Example: skip assert statements
+
+# Target directories to scan
+targets = ["stock_analysis", "helpers"]
+
+# Severity threshold: low, medium, high
+# We use medium (-ll) via command line args

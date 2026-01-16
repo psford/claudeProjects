@@ -32,7 +32,16 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.streamlit.io)",
       "Bash(curl:*)",
-      "WebFetch(domain:bito.ai)"
+      "WebFetch(domain:bito.ai)",
+      "Bash(powershell:*)",
+      "Bash(tasklist:*)",
+      "Bash(where:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker run:*)",
+      "Bash(\"C:\\\\Program Files\\\\Docker\\\\Docker\\\\resources\\\\bin\\\\docker.exe\" pull zaproxy/zap-stable)",
+      "Bash(set \"PATH=%PATH%;C:\\\\Program Files\\\\Docker\\\\Docker\\\\resources\\\\bin\")",
+      "Bash(docker pull:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/Docker/Docker/resources/bin\")"
     ]
   }
 }
