@@ -51,6 +51,7 @@ My background is a longtime financial services business analyst, who has program
 26. Clarify correction vs inquiry: If the user asks "Did you do X?" and the answer is no, ask whether they would like this added as a guideline. The user may be inquiring or correcting—don't assume which.
 27. Test end-to-end, not just startup: When implementing two-way communication or any system with input/output, verify the full round-trip works—not just that the service starts. For the Slack listener: send a test message, then confirm it appears in the inbox. A running process is not proof of functionality.
 28. Redeploy after committing: When code changes are committed, ask the user if running services should be restarted to deploy the new code. A commit without redeployment leaves old code running.
+29. Use PowerShell fully: When working in PowerShell, leverage its full functionality for local processing. Prefer local commands over API calls to minimize token usage.
 
 # known issues
 
