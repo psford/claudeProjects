@@ -167,3 +167,19 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 3. `1506678` - Add chart markers and hover popups for significant moves
 4. `1969ca6` - Complete Wikipedia-style hover popups for significant moves
 5. `449d5b5` - Fix hover detection and popup race condition
+
+### Security Scans
+| Tool | Type | Result |
+|------|------|--------|
+| SecurityCodeScan | SAST | ✅ Pass (0 warnings) |
+| OWASP ZAP | DAST | ✅ Pass (114 passed, 0 failures, 5 low-severity warnings) |
+
+ZAP Warnings (informational):
+- Cross-Domain JS (CDN usage - expected)
+- CSP directives incomplete
+- SRI attribute missing (removed due to CSS breakage)
+- Spectre isolation headers missing
+
+| - | Updated guideline #22 - rules files are sacrosanct | Success |
+| - | Added guideline #37 - proactive guideline updates from feedback | Success |
+| - | Replaced Finnhub publisher logos with kitten images in hover popups | Success |

@@ -40,6 +40,7 @@ My background is a longtime financial services business analyst, who has program
     - Do not read files "just in case" - fetch them when actually required
     - If data was loaded but not used, reconsider the loading pattern for future tasks
     - This applies to all projects, not just stock analyzer
+    - **EXCEPTION - Rules files are sacrosanct:** Always load `CLAUDE.md` and similar rules/guidelines files into context. These established rules override efficiency concerns—they must be present to ensure consistent behavior across sessions.
 23. Check the web before asking: When uncertain about syntax, best practices, or technical details, search the web first before asking the user. Only ask if web research doesn't provide a clear answer.
 24. Local helper code over API calls: Write reusable local programs to accomplish repetitive tasks rather than making repeated API calls. Store these in `helpers/` folder.
     - **Unix philosophy:** Build small, modular programs that do one thing well and can be composed together
@@ -74,6 +75,7 @@ My background is a longtime financial services business analyst, who has program
     - **For non-git files:** Create a backup copy before overwriting (e.g., `filename_backup_YYYYMMDD.ext`)
     - **Atomic operations:** When replacing file contents, prefer edit operations over full rewrites when possible
     - **Principle:** The user should always be able to recover any previous version of any file
+37. Proactive guideline updates: When the user provides feedback, evaluate whether it should become a guideline. If the feedback would improve future results or prevent repeated issues, add it to CLAUDE.md without being asked. Use judgment—not every comment needs to be a rule, but patterns and corrections should be captured.
 
 # known issues
 

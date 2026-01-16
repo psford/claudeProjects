@@ -467,19 +467,17 @@ const App = {
             : null;
 
         if (news) {
-            // Show news image or placeholder
-            if (news.imageUrl) {
-                image.src = news.imageUrl;
-                image.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-                image.onerror = () => {
-                    image.classList.add('hidden');
-                    placeholder.classList.remove('hidden');
-                };
-            } else {
+            // Show kitten image (Finnhub images are just publisher logos)
+            // Use placekitten.com with slight dimension variation for variety
+            const kittenWidth = 320;
+            const kittenHeight = 140 + Math.floor(Math.random() * 20); // 140-160px
+            image.src = `https://placekitten.com/${kittenWidth}/${kittenHeight}`;
+            image.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            image.onerror = () => {
                 image.classList.add('hidden');
                 placeholder.classList.remove('hidden');
-            }
+            };
 
             // Populate news content
             headlineEl.textContent = news.headline;
@@ -492,9 +490,16 @@ const App = {
             const newsDate = new Date(news.publishedAt);
             sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
         } else {
-            // No news available
-            image.classList.add('hidden');
-            placeholder.classList.remove('hidden');
+            // No news available - still show a kitten
+            const kittenWidth = 320;
+            const kittenHeight = 140 + Math.floor(Math.random() * 20);
+            image.src = `https://placekitten.com/${kittenWidth}/${kittenHeight}`;
+            image.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            image.onerror = () => {
+                image.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            };
 
             headlineEl.textContent = 'No related news found';
             headlineEl.href = '#';
