@@ -349,3 +349,5 @@ ZAP Warnings (informational):
 | - | Added codebase tidiness TODO to roadmap | Success |
 | - | Deleted root cruft (nul, slack_listener.log, yolov8n.pt) | Success |
 | - | Consolidated archives/ into archive/ | Success |
+| - | Reorganized CLAUDE.md (46 rules → 9 themed sections) | Success |
+| - | Archived original CLAUDE.md to archive/CLAUDE_v1_original.md | Success |
