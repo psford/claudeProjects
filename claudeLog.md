@@ -386,3 +386,20 @@ ZAP Warnings (informational):
 | - | Poll mode uses 👀 for auto-acknowledge, ✅ for confirmed | Success |
 | - | Reduced logging verbosity (WARNING level) | Success |
 | - | "night!" - Updated sessionState.md, preparing graceful shutdown | Success |
+
+---
+
+## 01/17/2026
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Fixed Slack listener thread reply support (conversations.replies API) | Success |
+| - | Synced 4 missed Slack messages, added ✅ reactions | Success |
+| - | Added "minimize yak-shaving" guideline to CLAUDE.md | Success |
+| - | Generated ED25519 SSH key for GitHub | Success |
+| - | Configured Windows SSH agent (auto-start service) | Success |
+| - | Switched repo remote to SSH (no more 2FA prompts) | Success |
+| - | Created CI_CD_SECURITY_PLAN.md for security tools migration | Success |
+| - | Added CodeQL workflow (.github/workflows/codeql.yml) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.14 (CI/CD security tools) | Success |
+| - | Pushed changes via SSH (verified auth works) | Success |
