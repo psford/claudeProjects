@@ -28,9 +28,63 @@ const App = {
      * Initialize the application
      */
     init() {
+        this.initDarkMode();
         this.bindEvents();
         this.checkApiHealth();
         this.prefetchImages();
+    },
+
+    /**
+     * Initialize dark mode from localStorage preference
+     */
+    initDarkMode() {
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+
+        // Check for saved preference or system preference
+        const savedPreference = localStorage.getItem('darkMode');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const isDark = savedPreference === 'true' || (savedPreference === null && systemPrefersDark);
+
+        // Apply initial state
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        }
+
+        // Toggle handler
+        darkModeToggle.addEventListener('click', () => {
+            const isDarkNow = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDarkNow);
+
+            if (isDarkNow) {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+
+            // Update Plotly chart colors if chart exists
+            this.updateChartTheme();
+        });
+    },
+
+    /**
+     * Update chart theme when dark mode changes
+     */
+    updateChartTheme() {
+        const chartEl = document.getElementById('stock-chart');
+        if (chartEl && chartEl.data) {
+            this.renderChart();
+        }
     },
 
     /**
@@ -246,17 +300,17 @@ const App = {
         const container = document.getElementById('search-results');
 
         if (!results || results.length === 0) {
-            container.innerHTML = '<div class="px-4 py-3 text-gray-500 text-sm">No results found</div>';
+            container.innerHTML = '<div class="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">No results found</div>';
             container.classList.remove('hidden');
             return;
         }
 
         container.innerHTML = results.map(r => `
-            <div class="search-result px-4 py-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
+            <div class="search-result px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0"
                  data-symbol="${r.symbol}">
-                <div class="font-medium text-gray-900">${r.symbol}</div>
-                <div class="text-sm text-gray-600">${r.shortName || r.longName || ''}</div>
-                <div class="text-xs text-gray-400">${r.exchange || ''} ${r.type ? `• ${r.type}` : ''}</div>
+                <div class="font-medium text-gray-900 dark:text-white">${r.symbol}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300">${r.shortName || r.longName || ''}</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">${r.exchange || ''} ${r.type ? `• ${r.type}` : ''}</div>
             </div>
         `).join('');
 
@@ -353,7 +407,7 @@ const App = {
         const identifiersHtml = identifiers.length > 0
             ? `<div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                 ${identifiers.map(id => `
-                    <span class="text-xs text-gray-500">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
                         <span class="font-medium">${id.label}:</span> ${id.value}
                     </span>
                 `).join('')}
@@ -362,19 +416,19 @@ const App = {
 
         // Smart truncation: only truncate long descriptions, and cut at sentence boundaries
         const descriptionHtml = info.description
-            ? `<p class="text-sm text-gray-600 mt-3">${this.truncateAtSentence(info.description, 500)}</p>`
+            ? `<p class="text-sm text-gray-600 dark:text-gray-300 mt-3">${this.truncateAtSentence(info.description, 500)}</p>`
             : '';
 
         document.getElementById('stock-info').innerHTML = `
             <div class="flex-1">
                 <div class="flex items-start justify-between">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-900">${info.longName || info.shortName || info.symbol}</h2>
-                        <p class="text-sm text-gray-500">${info.exchange || ''} ${info.currency ? `• ${info.currency}` : ''}${info.sector ? ` • ${info.sector}` : ''}</p>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">${info.longName || info.shortName || info.symbol}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">${info.exchange || ''} ${info.currency ? `• ${info.currency}` : ''}${info.sector ? ` • ${info.sector}` : ''}</p>
                         ${identifiersHtml}
                     </div>
                     <div class="text-right ml-4">
-                        <div class="text-3xl font-bold text-gray-900">
+                        <div class="text-3xl font-bold text-gray-900 dark:text-white">
                             $${this.formatNumber(info.currentPrice)}
                         </div>
                         <div class="text-lg ${isPositive ? 'text-success' : 'text-danger'}">
@@ -402,8 +456,8 @@ const App = {
 
         document.getElementById('key-metrics').innerHTML = metrics.map(m => `
             <div class="flex justify-between">
-                <span class="text-gray-600">${m.label}</span>
-                <span class="font-medium text-gray-900">${m.value || 'N/A'}</span>
+                <span class="text-gray-600 dark:text-gray-400">${m.label}</span>
+                <span class="font-medium text-gray-900 dark:text-white">${m.value || 'N/A'}</span>
             </div>
         `).join('');
     },
@@ -413,7 +467,7 @@ const App = {
      */
     renderPerformance(performance) {
         if (!performance) {
-            document.getElementById('performance-metrics').innerHTML = '<p class="text-gray-500">No performance data available</p>';
+            document.getElementById('performance-metrics').innerHTML = '<p class="text-gray-500 dark:text-gray-400">No performance data available</p>';
             return;
         }
 
@@ -427,8 +481,8 @@ const App = {
 
         document.getElementById('performance-metrics').innerHTML = metrics.map(m => `
             <div class="flex justify-between">
-                <span class="text-gray-600">${m.label}</span>
-                <span class="font-medium ${m.color || 'text-gray-900'}">${m.value || 'N/A'}</span>
+                <span class="text-gray-600 dark:text-gray-400">${m.label}</span>
+                <span class="font-medium ${m.color || 'text-gray-900 dark:text-white'}">${m.value || 'N/A'}</span>
             </div>
         `).join('');
     },
@@ -438,7 +492,7 @@ const App = {
      */
     renderSignificantMoves(data) {
         if (!data || !data.moves || data.moves.length === 0) {
-            document.getElementById('significant-moves').innerHTML = '<p class="text-gray-500">No significant moves found</p>';
+            document.getElementById('significant-moves').innerHTML = '<p class="text-gray-500 dark:text-gray-400">No significant moves found</p>';
             return;
         }
 
@@ -446,8 +500,8 @@ const App = {
             const isPositive = move.percentChange >= 0;
             const date = new Date(move.date).toLocaleDateString();
             return `
-                <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">${date}</span>
+                <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">${date}</span>
                     <span class="font-medium ${isPositive ? 'text-success' : 'text-danger'}">
                         ${isPositive ? '+' : ''}${this.formatNumber(move.percentChange)}%
                     </span>
@@ -461,20 +515,20 @@ const App = {
      */
     renderNews(data) {
         if (!data || !data.articles || data.articles.length === 0) {
-            document.getElementById('news-list').innerHTML = '<p class="text-gray-500">No recent news available</p>';
+            document.getElementById('news-list').innerHTML = '<p class="text-gray-500 dark:text-gray-400">No recent news available</p>';
             return;
         }
 
         document.getElementById('news-list').innerHTML = data.articles.slice(0, 5).map(article => {
             const date = new Date(article.publishedAt).toLocaleDateString();
             return `
-                <div class="border-b border-gray-100 pb-4">
+                <div class="border-b border-gray-100 dark:border-gray-700 pb-4">
                     <a href="${article.url}" target="_blank" rel="noopener noreferrer"
-                       class="text-primary hover:text-blue-700 font-medium">
+                       class="text-primary hover:text-blue-700 dark:hover:text-blue-400 font-medium">
                         ${article.headline}
                     </a>
-                    <p class="text-sm text-gray-500 mt-1">${article.source} • ${date}</p>
-                    ${article.summary ? `<p class="text-gray-600 mt-2 text-sm">${article.summary.substring(0, 150)}...</p>` : ''}
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${article.source} • ${date}</p>
+                    ${article.summary ? `<p class="text-gray-600 dark:text-gray-300 mt-2 text-sm">${article.summary.substring(0, 150)}...</p>` : ''}
                 </div>
             `;
         }).join('');

@@ -237,3 +237,17 @@ ZAP Warnings (informational):
 | - | Updated frontend to use backend image API | Success |
 | - | Updated CSP (removed dog.ceo, added blob:) | Success |
 | - | Updated TECHNICAL_SPEC.md v1.3 | Success |
+
+### Session Continuation (01/16/2026 evening)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Continued session from context compaction | Success |
+| - | Implemented dark mode UI toggle | Success |
+| - | Added Tailwind darkMode: 'class' configuration | Success |
+| - | Added dark: variants to all HTML elements | Success |
+| - | Added dark: variants to all JS-rendered elements | Success |
+| - | Added Plotly chart theme-aware colors | Success |
+| - | Added localStorage persistence for dark mode | Success |
+| - | Added system preference detection (prefers-color-scheme) | Success |
+| - | Built and started server | Success (localhost:5000) |

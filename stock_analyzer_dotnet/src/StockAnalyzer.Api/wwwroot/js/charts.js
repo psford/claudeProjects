@@ -4,6 +4,27 @@
  */
 const Charts = {
     /**
+     * Check if dark mode is currently enabled
+     */
+    isDarkMode() {
+        return document.documentElement.classList.contains('dark');
+    },
+
+    /**
+     * Get theme-aware colors
+     */
+    getThemeColors() {
+        const isDark = this.isDarkMode();
+        return {
+            background: isDark ? '#1F2937' : '#FFFFFF',
+            paper: isDark ? '#1F2937' : '#FFFFFF',
+            text: isDark ? '#F9FAFB' : '#1F2937',
+            gridColor: isDark ? '#374151' : '#E5E7EB',
+            axisColor: isDark ? '#9CA3AF' : '#6B7280'
+        };
+    },
+
+    /**
      * Render stock chart with OHLC data
      * @param {string} elementId - DOM element ID
      * @param {Object} historyData - Historical data from API
@@ -167,29 +188,36 @@ const Charts = {
             }
         }
 
+        const themeColors = this.getThemeColors();
+
         const layout = {
             title: {
                 text: `${historyData.symbol} - ${historyData.period.toUpperCase()}`,
-                font: { size: 18, color: '#1F2937' }
+                font: { size: 18, color: themeColors.text }
             },
             xaxis: {
-                title: 'Date',
+                title: { text: 'Date', font: { color: themeColors.axisColor } },
                 rangeslider: { visible: false },
-                gridcolor: '#E5E7EB'
+                gridcolor: themeColors.gridColor,
+                tickfont: { color: themeColors.axisColor },
+                linecolor: themeColors.gridColor
             },
             yaxis: {
-                title: 'Price ($)',
-                gridcolor: '#E5E7EB'
+                title: { text: 'Price ($)', font: { color: themeColors.axisColor } },
+                gridcolor: themeColors.gridColor,
+                tickfont: { color: themeColors.axisColor },
+                linecolor: themeColors.gridColor
             },
-            plot_bgcolor: '#FFFFFF',
-            paper_bgcolor: '#FFFFFF',
+            plot_bgcolor: themeColors.background,
+            paper_bgcolor: themeColors.paper,
             showlegend: true,
             legend: {
                 orientation: 'h',
                 yanchor: 'top',
                 y: -0.15,
                 xanchor: 'center',
-                x: 0.5
+                x: 0.5,
+                font: { color: themeColors.axisColor }
             },
             autosize: true,
             margin: { t: 50, r: 30, b: 80, l: 60, autoexpand: true },

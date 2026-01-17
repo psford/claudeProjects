@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.3
+**Version:** 1.4
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -204,6 +204,33 @@ The Stock Analyzer Dashboard allows users to:
 | FR-009.5 | The system must make headlines clickable links to the full article |
 | FR-009.6 | The system must display "No recent news available" when no news exists |
 
+### 3.10 Dark Mode (FR-010)
+
+| ID | Requirement |
+|----|-------------|
+| FR-010.1 | The system must provide a dark mode toggle button in the header |
+| FR-010.2 | The system must display a moon icon when in light mode (click to switch to dark) |
+| FR-010.3 | The system must display a sun icon when in dark mode (click to switch to light) |
+| FR-010.4 | The system must persist the user's dark mode preference across page reloads |
+| FR-010.5 | The system must respect the user's system preference (prefers-color-scheme) on first visit |
+| FR-010.6 | The system must apply dark mode styling to all UI elements (backgrounds, text, borders) |
+| FR-010.7 | The system must apply dark mode styling to the Plotly chart (background, gridlines, text) |
+| FR-010.8 | The system must provide smooth color transitions when toggling between modes |
+
+**User Story:** *As a user who works at night, I want a dark mode so that the bright interface doesn't strain my eyes.*
+
+**Color Scheme:**
+
+| Element | Light Mode | Dark Mode |
+|---------|------------|-----------|
+| Background | Gray-50 (#F9FAFB) | Gray-900 (#111827) |
+| Card Background | White (#FFFFFF) | Gray-800 (#1F2937) |
+| Primary Text | Gray-900 (#111827) | White (#FFFFFF) |
+| Secondary Text | Gray-600 (#4B5563) | Gray-300 (#D1D5DB) |
+| Borders | Gray-200 (#E5E7EB) | Gray-700 (#374151) |
+| Chart Background | White (#FFFFFF) | Gray-800 (#1F2937) |
+| Chart Gridlines | Gray-200 (#E5E7EB) | Gray-700 (#374151) |
+
 ---
 
 ## 4. User Interface Specifications
@@ -212,7 +239,7 @@ The Stock Analyzer Dashboard allows users to:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  📈 Stock Analyzer                          Powered by .NET 8 + Plotly.js│
+│  📈 Stock Analyzer             Powered by .NET 8 + Plotly.js  [🌙/☀️]   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │ [Search Box with Autocomplete] [Period ▼] [Chart Type ▼] [Analyze]│  │

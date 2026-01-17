@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.5
+**Version:** 1.6
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -507,8 +507,57 @@ const API = {
 - Line chart traces
 - Moving average overlays
 - Responsive layout
+- Theme-aware colors (light/dark mode)
 
-### 6.3 Autocomplete Flow
+### 6.3 Dark Mode Implementation
+
+The application supports light and dark color themes via Tailwind CSS class-based dark mode.
+
+**Configuration:**
+```javascript
+// tailwind.config in index.html
+tailwind.config = {
+    darkMode: 'class',  // Enable class-based dark mode
+    ...
+}
+```
+
+**Implementation Details:**
+
+| Component | Implementation |
+|-----------|---------------|
+| Toggle Button | Sun/moon icons in header, click handler toggles `dark` class on `<html>` |
+| Persistence | localStorage key `darkMode` stores `'true'` or `'false'` |
+| System Preference | `window.matchMedia('(prefers-color-scheme: dark)')` for initial state |
+| Static Elements | Tailwind `dark:` prefix classes (e.g., `dark:bg-gray-800 dark:text-white`) |
+| Dynamic Elements | JavaScript renders `dark:` classes in template strings |
+| Plotly Charts | `Charts.getThemeColors()` returns colors based on `document.documentElement.classList.contains('dark')` |
+
+**Initialization Flow:**
+```
+Page Load → initDarkMode()
+                ↓
+    Check localStorage('darkMode')
+                ↓
+    If null → Check system preference
+                ↓
+    Apply 'dark' class to <html> if needed
+                ↓
+    Update icon visibility (sun/moon)
+```
+
+**Theme Toggle Flow:**
+```
+User clicks toggle → Toggle 'dark' class on <html>
+                          ↓
+                   Save to localStorage
+                          ↓
+                   Update icons
+                          ↓
+                   If chart exists → Re-render with new theme colors
+```
+
+### 6.4 Autocomplete Flow
 
 ```
 User types → 300ms debounce → API.search(query) → Show dropdown
@@ -518,7 +567,7 @@ User clicks result → Populate input → Hide dropdown
 User clicks Analyze → analyzeStock() → Load all data
 ```
 
-### 6.4 Image Caching System
+### 6.5 Image Caching System
 
 The application pre-caches ML-processed animal images for instant display in hover popups.
 Images are fetched from the backend API, which handles ML detection and cropping server-side.
