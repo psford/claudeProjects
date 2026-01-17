@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.7
+**Version:** 1.8
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -237,17 +237,23 @@ The Stock Analyzer Dashboard allows users to:
 |----|-------------|
 | FR-011.1 | The system must support RSI (Relative Strength Index) indicator |
 | FR-011.2 | The system must support MACD (Moving Average Convergence Divergence) indicator |
-| FR-011.3 | The system must allow users to toggle RSI display independently |
-| FR-011.4 | The system must allow users to toggle MACD display independently |
-| FR-011.5 | The system must display RSI in a separate panel below the price chart |
-| FR-011.6 | The system must display MACD in a separate panel below the price chart |
-| FR-011.7 | The RSI panel must show overbought (70) and oversold (30) reference lines |
-| FR-011.8 | The MACD panel must show the MACD line, signal line, and histogram |
-| FR-011.9 | The chart must dynamically resize to accommodate indicator panels |
-| FR-011.10 | The system must use 14-period RSI calculation by default |
-| FR-011.11 | The system must use standard MACD parameters (12, 26, 9) by default |
+| FR-011.3 | The system must support Bollinger Bands indicator |
+| FR-011.4 | The system must allow users to toggle RSI display independently |
+| FR-011.5 | The system must allow users to toggle MACD display independently |
+| FR-011.6 | The system must allow users to toggle Bollinger Bands display independently |
+| FR-011.7 | The system must display RSI in a separate panel below the price chart |
+| FR-011.8 | The system must display MACD in a separate panel below the price chart |
+| FR-011.9 | The system must display Bollinger Bands overlaid on the price chart |
+| FR-011.10 | The RSI panel must show overbought (70) and oversold (30) reference lines |
+| FR-011.11 | The MACD panel must show the MACD line, signal line, and histogram |
+| FR-011.12 | The Bollinger Bands must show upper band, middle band (SMA), and lower band |
+| FR-011.13 | The Bollinger Bands must include shaded fill between upper and lower bands |
+| FR-011.14 | The chart must dynamically resize to accommodate indicator panels |
+| FR-011.15 | The system must use 14-period RSI calculation by default |
+| FR-011.16 | The system must use standard MACD parameters (12, 26, 9) by default |
+| FR-011.17 | The system must use standard Bollinger Bands parameters (20-period SMA, 2 std dev) |
 
-**User Story:** *As a technical trader, I want to see RSI and MACD indicators so that I can identify overbought/oversold conditions and momentum trends.*
+**User Story:** *As a technical trader, I want to see RSI, MACD, and Bollinger Bands indicators so that I can identify overbought/oversold conditions, momentum trends, and volatility.*
 
 **RSI Configuration:**
 
@@ -270,6 +276,16 @@ The Stock Analyzer Dashboard allows users to:
 | Signal Line Color | Orange (#F59E0B) |
 | Histogram (Positive) | Green (rgba(16, 185, 129, 0.7)) |
 | Histogram (Negative) | Red (rgba(239, 68, 68, 0.7)) |
+
+**Bollinger Bands Configuration:**
+
+| Setting | Value |
+|---------|-------|
+| SMA Period | 20 days |
+| Standard Deviations | 2 |
+| Band Color | Indigo (#6366F1) |
+| Fill Color | Indigo with 10% opacity (rgba(99, 102, 241, 0.1)) |
+| Middle Band Style | Dashed line |
 
 **Chart Layout (Dynamic):**
 
@@ -597,6 +613,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.8 | 2026-01-17 | Added Bollinger Bands to Technical Indicators (FR-011): 20-period SMA with 2 std dev bands, overlaid on price chart with shaded fill | Claude |
 | 1.7 | 2026-01-17 | Added Documentation Page (FR-013): Tabbed docs viewer, Mermaid.js architecture diagrams, Fuse.js search, scroll spy TOC highlighting, resizable sidebar | Claude |
 | 1.6 | 2026-01-17 | Added Stock Comparison (FR-012): Compare to second stock/index with normalized % change | Claude |
 | 1.5 | 2026-01-16 | Added Technical Indicators (FR-011): RSI and MACD with dynamic chart panels | Claude |

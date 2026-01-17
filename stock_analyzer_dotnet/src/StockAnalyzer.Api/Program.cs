@@ -210,6 +210,7 @@ app.MapGet("/api/stock/{ticker}/analysis", async (
     var performance = analysisService.CalculatePerformance(history.Data);
     var rsi = analysisService.CalculateRsi(history.Data);
     var macd = analysisService.CalculateMacd(history.Data);
+    var bollingerBands = analysisService.CalculateBollingerBands(history.Data);
 
     return Results.Ok(new
     {
@@ -218,7 +219,8 @@ app.MapGet("/api/stock/{ticker}/analysis", async (
         performance,
         movingAverages,
         rsi,
-        macd
+        macd,
+        bollingerBands
     });
 })
 .WithName("GetStockAnalysis")

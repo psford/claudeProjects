@@ -100,6 +100,7 @@ const Charts = {
             showMarkers = true,
             showRsi = false,
             showMacd = false,
+            showBollinger = false,
             comparisonData = null,
             comparisonTicker = null
         } = options;
@@ -285,6 +286,50 @@ const Charts = {
                     yaxis: 'y'
                 });
             }
+        }
+
+        // Bollinger Bands (on price chart, yaxis = y)
+        if (showBollinger && analysisData && analysisData.bollingerBands) {
+            const bbData = analysisData.bollingerBands;
+            const bbDates = bbData.filter(d => d.upperBand != null).map(d => d.date);
+            const upperBand = bbData.filter(d => d.upperBand != null).map(d => d.upperBand);
+            const middleBand = bbData.filter(d => d.middleBand != null).map(d => d.middleBand);
+            const lowerBand = bbData.filter(d => d.lowerBand != null).map(d => d.lowerBand);
+
+            // Upper band
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: bbDates,
+                y: upperBand,
+                name: 'BB Upper',
+                line: { color: '#6366F1', width: 1 },
+                yaxis: 'y'
+            });
+
+            // Middle band (SMA 20)
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: bbDates,
+                y: middleBand,
+                name: 'BB Middle',
+                line: { color: '#6366F1', width: 1, dash: 'dash' },
+                yaxis: 'y'
+            });
+
+            // Lower band
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: bbDates,
+                y: lowerBand,
+                name: 'BB Lower',
+                line: { color: '#6366F1', width: 1 },
+                fill: 'tonexty',
+                fillcolor: 'rgba(99, 102, 241, 0.1)',
+                yaxis: 'y'
+            });
         }
 
         // Significant move markers (on price chart, yaxis = y)

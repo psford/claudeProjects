@@ -257,8 +257,8 @@ const App = {
             document.getElementById(id).addEventListener('change', () => this.updateChart());
         });
 
-        // Technical indicator toggles (RSI, MACD)
-        ['show-rsi', 'show-macd'].forEach(id => {
+        // Technical indicator toggles (RSI, MACD, Bollinger)
+        ['show-rsi', 'show-macd', 'show-bollinger'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => this.updateChart());
         });
 
@@ -532,21 +532,27 @@ const App = {
     disableIndicators(disabled) {
         const rsiCheckbox = document.getElementById('show-rsi');
         const macdCheckbox = document.getElementById('show-macd');
+        const bollingerCheckbox = document.getElementById('show-bollinger');
         const rsiLabel = document.getElementById('rsi-label');
         const macdLabel = document.getElementById('macd-label');
+        const bollingerLabel = document.getElementById('bollinger-label');
 
         rsiCheckbox.disabled = disabled;
         macdCheckbox.disabled = disabled;
+        bollingerCheckbox.disabled = disabled;
 
         if (disabled) {
             // Uncheck and dim the indicators
             rsiCheckbox.checked = false;
             macdCheckbox.checked = false;
+            bollingerCheckbox.checked = false;
             rsiLabel.classList.add('opacity-50', 'cursor-not-allowed');
             macdLabel.classList.add('opacity-50', 'cursor-not-allowed');
+            bollingerLabel.classList.add('opacity-50', 'cursor-not-allowed');
         } else {
             rsiLabel.classList.remove('opacity-50', 'cursor-not-allowed');
             macdLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+            bollingerLabel.classList.remove('opacity-50', 'cursor-not-allowed');
         }
     },
 
@@ -763,6 +769,7 @@ const App = {
             showMarkers: document.getElementById('show-markers').checked,
             showRsi: document.getElementById('show-rsi').checked,
             showMacd: document.getElementById('show-macd').checked,
+            showBollinger: document.getElementById('show-bollinger').checked,
             // Comparison data
             comparisonData: this.comparisonHistoryData,
             comparisonTicker: this.comparisonTicker

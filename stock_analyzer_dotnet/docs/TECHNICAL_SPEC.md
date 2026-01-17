@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.11
+**Version:** 1.12
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -363,7 +363,19 @@ public record MacdData
 }
 ```
 
-### 4.7 CompanyProfile
+### 4.7 BollingerData
+
+```csharp
+public record BollingerData
+{
+    public required DateTime Date { get; init; }
+    public decimal? UpperBand { get; init; }    // Middle + (StdDev * multiplier)
+    public decimal? MiddleBand { get; init; }   // 20-period SMA
+    public decimal? LowerBand { get; init; }    // Middle - (StdDev * multiplier)
+}
+```
+
+### 4.8 CompanyProfile
 
 ```csharp
 public record CompanyProfile
@@ -452,6 +464,7 @@ Used to look up SEDOL for UK/Irish securities from ISIN.
 | `DetectSignificantMovesAsync(...)` | Find moves exceeding threshold |
 | `CalculateRsi(data, period)` | Calculate RSI using Wilder's smoothing |
 | `CalculateMacd(data, fast, slow, signal)` | Calculate MACD line, signal line, histogram |
+| `CalculateBollingerBands(data, period, stdDev)` | Calculate Bollinger Bands (upper, middle, lower) |
 | `CalculateEma(values, period)` | Private helper for EMA calculation |
 
 **RSI Calculation (Wilder's Smoothing Method):**
@@ -470,6 +483,14 @@ Used to look up SEDOL for UK/Irish securities from ISIN.
 3. MACD Line = Fast EMA - Slow EMA
 4. Signal Line = 9-period EMA of MACD Line
 5. Histogram = MACD Line - Signal Line
+```
+
+**Bollinger Bands Calculation:**
+```
+1. Middle Band = 20-period SMA of close prices
+2. Standard Deviation = √(Σ(close - SMA)² / period)
+3. Upper Band = Middle Band + (2 × Standard Deviation)
+4. Lower Band = Middle Band - (2 × Standard Deviation)
 ```
 
 **EMA Formula:**
@@ -1191,6 +1212,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.12 | 2026-01-17 | Bollinger Bands: BollingerData model, CalculateBollingerBands method (20-period SMA, 2 std dev), overlaid on price chart with shaded fill |
 | 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
 | 1.10 | 2026-01-17 | Architecture visualization: Mermaid.js diagrams loaded from external .mmd files (hybrid auto/manual approach), MIME type config for .mmd files, MSBuild target for diagrams directory |
 | 1.9 | 2026-01-17 | Documentation page: docs.html with tabbed markdown viewer, marked.js integration, TOC sidebar |

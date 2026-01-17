@@ -330,4 +330,76 @@ public class AnalysisService
 
         return result;
     }
+
+    /// <summary>
+    /// Calculate Bollinger Bands for historical data.
+    /// Bollinger Bands consist of a middle band (SMA) with upper and lower bands
+    /// at a specified number of standard deviations.
+    /// </summary>
+    /// <param name="data">OHLCV data points</param>
+    /// <param name="period">SMA period (default 20)</param>
+    /// <param name="standardDeviations">Number of standard deviations (default 2)</param>
+    /// <returns>List of Bollinger Bands data points</returns>
+    public List<BollingerData> CalculateBollingerBands(
+        List<OhlcvData> data,
+        int period = 20,
+        decimal standardDeviations = 2.0m)
+    {
+        var result = new List<BollingerData>();
+
+        if (data.Count < period)
+        {
+            // Not enough data - return all nulls
+            return data.Select(d => new BollingerData
+            {
+                Date = d.Date,
+                UpperBand = null,
+                MiddleBand = null,
+                LowerBand = null
+            }).ToList();
+        }
+
+        var closes = data.Select(d => d.Close).ToList();
+
+        for (int i = 0; i < data.Count; i++)
+        {
+            if (i < period - 1)
+            {
+                // Not enough data yet
+                result.Add(new BollingerData
+                {
+                    Date = data[i].Date,
+                    UpperBand = null,
+                    MiddleBand = null,
+                    LowerBand = null
+                });
+            }
+            else
+            {
+                // Get the window of closes for this period
+                var window = closes.Skip(i - period + 1).Take(period).ToList();
+
+                // Calculate SMA (middle band)
+                decimal sma = window.Average();
+
+                // Calculate standard deviation
+                decimal sumSquaredDiff = window.Sum(v => (v - sma) * (v - sma));
+                decimal stdDev = (decimal)Math.Sqrt((double)(sumSquaredDiff / period));
+
+                // Calculate bands
+                decimal upperBand = sma + (standardDeviations * stdDev);
+                decimal lowerBand = sma - (standardDeviations * stdDev);
+
+                result.Add(new BollingerData
+                {
+                    Date = data[i].Date,
+                    UpperBand = upperBand,
+                    MiddleBand = sma,
+                    LowerBand = lowerBand
+                });
+            }
+        }
+
+        return result;
+    }
 }

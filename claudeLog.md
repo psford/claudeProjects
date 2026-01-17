@@ -349,5 +349,11 @@ ZAP Warnings (informational):
 | - | Added codebase tidiness TODO to roadmap | Success |
 | - | Deleted root cruft (nul, slack_listener.log, yolov8n.pt) | Success |
 | - | Consolidated archives/ into archive/ | Success |
+| - | Implemented Bollinger Bands indicator | Success |
+| - | Added BollingerData model to TechnicalIndicators.cs | Success |
+| - | Added CalculateBollingerBands to AnalysisService | Success |
+| - | Added Bollinger checkbox to UI and charts.js rendering | Success |
+| - | Updated FUNCTIONAL_SPEC.md v1.8 (Bollinger Bands) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.12 (Bollinger Bands) | Success |
 | - | Reorganized CLAUDE.md (46 rules → 9 themed sections) | Success |
 | - | Archived original CLAUDE.md to archive/CLAUDE_v1_original.md | Success |

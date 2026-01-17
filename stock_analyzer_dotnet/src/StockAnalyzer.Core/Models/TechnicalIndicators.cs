@@ -43,3 +43,31 @@ public record MacdData
     /// </summary>
     public decimal? Histogram { get; init; }
 }
+
+/// <summary>
+/// Bollinger Bands data point.
+/// Bollinger Bands consist of a middle band (SMA) with upper and lower bands
+/// at a specified number of standard deviations above and below.
+/// </summary>
+public record BollingerData
+{
+    public required DateTime Date { get; init; }
+
+    /// <summary>
+    /// Upper band = Middle band + (StdDev * multiplier).
+    /// Null when insufficient data for calculation.
+    /// </summary>
+    public decimal? UpperBand { get; init; }
+
+    /// <summary>
+    /// Middle band = Simple Moving Average (typically 20-period).
+    /// Null when insufficient data for calculation.
+    /// </summary>
+    public decimal? MiddleBand { get; init; }
+
+    /// <summary>
+    /// Lower band = Middle band - (StdDev * multiplier).
+    /// Null when insufficient data for calculation.
+    /// </summary>
+    public decimal? LowerBand { get; init; }
+}
