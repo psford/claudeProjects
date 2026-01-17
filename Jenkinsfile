@@ -57,7 +57,7 @@ pipeline {
 
     post {
         always {
-            cleanWs()  // Clean workspace after build
+            deleteDir()  // Clean workspace after build
         }
         success {
             echo 'Build succeeded!'
