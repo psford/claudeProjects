@@ -60,7 +60,19 @@
       "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" show 9845c87 -- stock_analyzer_dotnet/src/StockAnalyzer.Api/wwwroot/index.html)",
       "Bash(echo:*)",
       "WebFetch(domain:placekitten.com)",
-      "WebFetch(domain:cataas.com)"
+      "WebFetch(domain:cataas.com)",
+      "WebFetch(domain:dog.ceo)",
+      "WebFetch(domain:random.dog)",
+      "WebFetch(domain:placedog.net)",
+      "WebFetch(domain:images.dog.ceo)",
+      "WebFetch(domain:placedog.com)",
+      "WebFetch(domain:www.srihash.org)",
+      "Bash(dir:*)",
+      "Bash(move:*)",
+      "Bash(detect-secrets scan:*)",
+      "Bash(timeout:*)",
+      "Bash(mermaid-graph:*)",
+      "Bash(dll2mmd:*)"
     ]
   }
 }

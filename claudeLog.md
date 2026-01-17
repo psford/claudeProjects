@@ -347,3 +347,5 @@ ZAP Warnings (informational):
 | - | Updated ROADMAP.md with all .NET completed features | Success |
 | - | Added guideline #46 (archive source, delete cruft) | Success |
 | - | Added codebase tidiness TODO to roadmap | Success |
+| - | Deleted root cruft (nul, slack_listener.log, yolov8n.pt) | Success |
+| - | Consolidated archives/ into archive/ | Success |
