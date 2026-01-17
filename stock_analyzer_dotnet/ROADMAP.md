@@ -91,10 +91,23 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| GitHub integration | Connect to remote repository | Blocked (auth issues) |
-| CI/CD pipeline | GitHub Actions for automated testing | Planned (needs GitHub) |
+| Docker containerization | Dockerfile + docker-compose for deployment | Planned |
+| Load testing | k6 or Locust performance benchmarks | Planned |
+| Structured logging | Serilog with JSON output | Planned |
+| Error tracking | Sentry or Application Insights integration | Planned |
 | Log archiving | Auto-archive logs when size threshold exceeded | Planned |
-| Codebase tidiness | Define best practices for keeping project files clean | TODO |
+
+### Recently Completed (Infrastructure)
+
+| Feature | Description | Date |
+|---------|-------------|------|
+| GitHub integration | SSH auth, remote repository | 01/17/2026 |
+| GitHub Actions CI | Build + test on push/PR | 01/17/2026 |
+| Jenkins pipeline | Local Docker-based CI | 01/17/2026 |
+| CodeQL security | SAST for C# and Python | 01/17/2026 |
+| Branch protection | PR reviews, status checks required | 01/17/2026 |
+| PR templates | Standardized review checklist | 01/17/2026 |
+| CODEOWNERS | Auto-assign reviewers | 01/17/2026 |
 
 ---
 
