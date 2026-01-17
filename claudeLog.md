@@ -335,3 +335,5 @@ ZAP Warnings (informational):
 | - | Committed docs page enhancements | Success (52c3aa2) |
 | - | Updated FUNCTIONAL_SPEC.md v1.7 (FR-013 Documentation Page) | Success |
 | - | Updated TECHNICAL_SPEC.md v1.11 (search, scroll spy) | Success |
+| - | Committed spec updates | Success (9bb2134) |
+| - | Added guideline #45 (pre-commit spec check) | Success |
