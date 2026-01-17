@@ -93,7 +93,6 @@ Planned features and improvements for the Stock Analyzer .NET application.
 |---------|-------------|--------|
 | Docker containerization | Dockerfile + docker-compose for deployment | Planned |
 | Load testing | k6 or Locust performance benchmarks | Planned |
-| Structured logging | Serilog with JSON output | Planned |
 | Error tracking | Sentry or Application Insights integration | Planned |
 | Log archiving | Auto-archive logs when size threshold exceeded | Planned |
 
@@ -101,6 +100,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Date |
 |---------|-------------|------|
+| Structured logging | Serilog with file/console output, request logging | 01/17/2026 |
+| Health checks | /health, /health/live, /health/ready endpoints | 01/17/2026 |
 | GitHub integration | SSH auth, remote repository | 01/17/2026 |
 | GitHub Actions CI | Build + test on push/PR | 01/17/2026 |
 | Jenkins pipeline | Local Docker-based CI | 01/17/2026 |
