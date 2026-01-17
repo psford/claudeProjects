@@ -108,6 +108,12 @@ When I say "night!":
 - Have a fallback plan if unreliable
 - Never assume a service works - test it now
 
+**Spec updates - do them incrementally:**
+- Update specs AS you write code, not after
+- Don't batch spec updates at end of task - that leads to forgotten details
+- Each code commit should include its corresponding spec changes
+- If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
+
 ### Pre-Commit Checkpoint (CRITICAL)
 
 **"Commit" means the full workflow, not just `git commit`.**
