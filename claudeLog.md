@@ -337,3 +337,4 @@ ZAP Warnings (informational):
 | - | Updated TECHNICAL_SPEC.md v1.11 (search, scroll spy) | Success |
 | - | Committed spec updates | Success (9bb2134) |
 | - | Added guideline #45 (pre-commit spec check) | Success |
+| - | Updated guideline #45 - "commit" = full workflow, not literal command | Success |

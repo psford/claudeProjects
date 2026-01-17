@@ -102,6 +102,7 @@ My background is a longtime financial services business analyst, who has program
     - **This is a mental checkpoint, not a post-commit cleanup task**
     - The commit message should describe what was built AND documented together
     - **Root cause of past violations:** Treating "commit" as end-of-task instead of treating "specs updated + committed" as end-of-task
+    - **IMPORTANT:** When the user says "commit" or "go ahead and commit", this is shorthand for "complete the full commit workflow" — not a literal single `git commit` command. The full workflow includes: spec updates, claudeLog updates, staging all related files, then committing.
 
 # deployment
 
