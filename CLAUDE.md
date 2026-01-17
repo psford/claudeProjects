@@ -31,6 +31,7 @@ These always apply, regardless of task.
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
+| **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
 
 ---
 
