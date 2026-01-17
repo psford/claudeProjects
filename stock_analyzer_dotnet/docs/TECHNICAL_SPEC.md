@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.16
+**Version:** 1.17
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -182,6 +182,14 @@ This specification covers:
 | `/api/images/cat` | GET | ML-processed cat image | None |
 | `/api/images/dog` | GET | ML-processed dog image | None |
 | `/api/images/status` | GET | Image cache status | None |
+| `/api/watchlists` | GET | List all watchlists | None |
+| `/api/watchlists` | POST | Create watchlist | `name` (body) |
+| `/api/watchlists/{id}` | GET | Get watchlist by ID | `id`: Watchlist ID |
+| `/api/watchlists/{id}` | PUT | Rename watchlist | `id`, `name` (body) |
+| `/api/watchlists/{id}` | DELETE | Delete watchlist | `id`: Watchlist ID |
+| `/api/watchlists/{id}/tickers` | POST | Add ticker to watchlist | `id`, `ticker` (body) |
+| `/api/watchlists/{id}/tickers/{ticker}` | DELETE | Remove ticker | `id`, `ticker` |
+| `/api/watchlists/{id}/quotes` | GET | Get quotes for watchlist | `id`: Watchlist ID |
 | `/api/health` | GET | Health check | None |
 
 ### 3.2 Response Examples
@@ -1410,6 +1418,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |
 | 1.16 | 2026-01-17 | Status dashboard (/status.html), .NET security analyzers (NetAnalyzers, Roslynator), OWASP Dependency Check, Dependabot config |
 | 1.15 | 2026-01-17 | Observability: Serilog structured logging with file/console output, ASP.NET Core health checks (/health, /health/live, /health/ready) |
 | 1.14 | 2026-01-17 | CI/CD security: CodeQL workflow (.github/workflows/codeql.yml), security toolchain documentation, CI_CD_SECURITY_PLAN.md |

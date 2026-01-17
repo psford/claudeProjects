@@ -22,6 +22,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Technical indicators | RSI and MACD with toggle checkboxes | 01/17/2026 |
 | Stock comparison | Normalized % change comparison with benchmark buttons | 01/17/2026 |
 | Dark mode | Full dark mode support with localStorage persistence | 01/16/2026 |
+| Watchlist | Multiple watchlists with ticker management, JSON storage, multi-user ready | 01/17/2026 |
 
 ### Image System
 
@@ -67,7 +68,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 |---------|-------------|--------|
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
-| Portfolio tracker | Track holdings, calculate weighted returns | Planned |
+| ~~Portfolio tracker~~ | ~~Track holdings, calculate weighted returns~~ | **Completed** (as Watchlist) |
 
 ### Medium Priority
 
@@ -120,6 +121,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/17/2026 | Completed: Watchlist feature with sidebar UI, 8 API endpoints, JSON storage, multi-user ready |
 | 01/17/2026 | Added: .NET security analyzers, Dependabot, OWASP Dep Check |
 | 01/17/2026 | Added: Status dashboard for health monitoring |
 | 01/17/2026 | Reorganized roadmap: archived Python version, consolidated .NET features |
