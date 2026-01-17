@@ -288,3 +288,33 @@ ZAP Warnings (informational):
 
 **Tests:**
 - 13 new unit tests for RSI and MACD calculations
+
+| - | Committed RSI/MACD feature | Success (a60c082) |
+| - | Implemented stock comparison feature | Success |
+| - | Added second search box "Compare to (Optional)" | Success |
+| - | Added benchmark buttons (SPY, QQQ, ^DJI) | Success |
+| - | Added normalizeToPercentChange() helper to charts.js | Success |
+| - | Added comparison mode rendering with baseline | Success |
+| - | Added disableIndicators() function for comparison mode | Success |
+| - | Updated FUNCTIONAL_SPEC.md v1.6 (FR-012 Stock Comparison) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.8 (comparison feature) | Success |
+| - | Committed stock comparison feature | Success (12b2cef) |
+
+### Documentation Page Implementation
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created wwwroot/docs/ folder | Success |
+| - | Copied CLAUDE.md to wwwroot/docs/ | Success |
+| - | Copied FUNCTIONAL_SPEC.md to wwwroot/docs/ | Success |
+| - | Copied TECHNICAL_SPEC.md to wwwroot/docs/ | Success |
+| - | Created docs.html with tabbed navigation | Success |
+| - | Added marked.js for client-side markdown rendering | Success |
+| - | Added TOC sidebar auto-generated from headings | Success |
+| - | Added dark mode support matching main page | Success |
+| - | Added "View Documentation" link to index.html footer | Success |
+| - | Updated TECHNICAL_SPEC.md v1.9 (docs.html, file structure) | Success |
+| - | Tested docs.html and markdown files accessible (HTTP 200) | Success |
+| - | Added MSBuild target to auto-copy docs during build | Success |
+| - | Added guideline #43 (web documentation sync) | Success |
+| - | Verified build-time sync mechanism | Success

@@ -24,4 +24,19 @@
     <None Include="MLModels\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Copy documentation files to wwwroot/docs/ during build -->
+  <Target Name="CopyDocumentation" BeforeTargets="Build">
+    <Message Text="Copying documentation files to wwwroot/docs/..." Importance="high" />
+    <MakeDir Directories="$(ProjectDir)wwwroot\docs" />
+    <Copy SourceFiles="$(ProjectDir)..\..\..\CLAUDE.md"
+          DestinationFiles="$(ProjectDir)wwwroot\docs\CLAUDE.md"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\..\docs\FUNCTIONAL_SPEC.md"
+          DestinationFiles="$(ProjectDir)wwwroot\docs\FUNCTIONAL_SPEC.md"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\..\docs\TECHNICAL_SPEC.md"
+          DestinationFiles="$(ProjectDir)wwwroot\docs\TECHNICAL_SPEC.md"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

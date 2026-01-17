@@ -78,11 +78,11 @@ app.Use(async (context, next) =>
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     // Permissions policy
     context.Response.Headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
-    // Content Security Policy - allow CDN scripts for Tailwind and Plotly
+    // Content Security Policy - allow CDN scripts for Tailwind, Plotly, and marked.js
     // Images now served from our own backend (no external image fetches from client)
     context.Response.Headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.plot.ly https://cdn.jsdelivr.net; " +
         "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; " +
         "img-src 'self' data: blob:; " +
         "font-src 'self' https:; " +
