@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.8
+**Version:** 1.9
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -53,8 +53,7 @@ The Stock Analyzer Dashboard allows users to:
 - Does not provide real-time streaming prices (data has ~15 minute delay)
 - Does not execute trades or connect to brokerage accounts
 - Does not provide investment recommendations or advice
-- Does not store user data, portfolios, or watchlists
-- Does not require user registration or login
+- Does not require user registration or login (single-user mode; multi-user ready)
 
 ---
 
@@ -400,6 +399,61 @@ The Stock Analyzer Dashboard allows users to:
 | Frontend Architecture | MANUAL | JavaScript modules |
 | API Endpoints | MANUAL | REST API reference |
 
+### 3.14 Watchlist Management (FR-014)
+
+**Purpose:** Allow users to save and organize stocks into watchlists for quick access and monitoring.
+
+| ID | Requirement |
+|----|-------------|
+| FR-014.1 | The system must allow users to create multiple named watchlists |
+| FR-014.2 | The system must allow users to rename existing watchlists |
+| FR-014.3 | The system must allow users to delete watchlists |
+| FR-014.4 | The system must allow users to add tickers to a watchlist |
+| FR-014.5 | The system must allow users to remove tickers from a watchlist |
+| FR-014.6 | The system must display all watchlists in a collapsible sidebar |
+| FR-014.7 | The system must display current price and daily change for each ticker in a watchlist |
+| FR-014.8 | The system must allow clicking a ticker in a watchlist to analyze that stock |
+| FR-014.9 | The system must provide an "Add to Watchlist" button when a stock is loaded |
+| FR-014.10 | The system must persist watchlists across browser sessions (server-side storage) |
+| FR-014.11 | The system must support future multi-user authentication (UserId field) |
+| FR-014.12 | The system must prevent duplicate tickers in the same watchlist |
+| FR-014.13 | The system must convert ticker symbols to uppercase |
+| FR-014.14 | The system must update the "updatedAt" timestamp when a watchlist is modified |
+
+**User Story:** *As an investor, I want to save stocks to watchlists so that I can quickly monitor and analyze my favorite stocks without searching each time.*
+
+**Sidebar Layout:**
+
+```
+┌─────────────────┐
+│  MY WATCHLISTS  │
+│  ─────────────  │
+│  [+ New List]   │
+│                 │
+│  ▼ Tech Stocks  │
+│    AAPL  $150 ↑ │
+│    MSFT  $380 ↑ │
+│    GOOGL $140 ↓ │
+│                 │
+│  ▶ Energy       │
+│                 │
+│  ▶ Financials   │
+└─────────────────┘
+```
+
+**Watchlist Data Model:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Unique identifier (GUID) |
+| name | string | User-defined watchlist name |
+| tickers | string[] | Array of ticker symbols |
+| createdAt | datetime | Creation timestamp (UTC) |
+| updatedAt | datetime | Last modification timestamp (UTC) |
+| userId | string? | Optional user ID for multi-user support |
+
+**Storage:** JSON file (`data/watchlists.json`) with repository pattern for future database migration.
+
 ---
 
 ## 4. User Interface Specifications
@@ -407,43 +461,38 @@ The Stock Analyzer Dashboard allows users to:
 ### 4.1 Page Layout
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  📈 Stock Analyzer             Powered by .NET 8 + Plotly.js  [🌙/☀️]   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │ [Search Box with Autocomplete] [Period ▼] [Chart Type ▼] [Analyze]│  │
-│  │ ☑ SMA 20   ☑ SMA 50   ☐ SMA 200                                   │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  ┌─────────────────────────────────┐  ┌────────────────────────────────┐│
-│  │ SYMBOL                          │  │ Key Metrics                    ││
-│  │ Company Name                    │  │ - Market Cap                   ││
-│  │ Exchange • Currency             │  │ - P/E Ratio                    ││
-│  │                    $XXX.XX      │  │ - 52W High/Low                 ││
-│  │                    +X.XX (+X%)  │  │ - Avg Volume                   ││
-│  └─────────────────────────────────┘  │ - Dividend Yield               ││
-│                                       └────────────────────────────────┘│
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │                                                                    │ │
-│  │                    INTERACTIVE PLOTLY CHART                        │ │
-│  │                                                                    │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│  ┌─────────────────────────────┐  ┌──────────────────────────────────┐  │
-│  │ Performance                 │  │ Significant Moves (>3%)          │  │
-│  │ - Total Return              │  │ Date | +X.XX%                    │  │
-│  │ - Volatility                │  │ Date | -X.XX%                    │  │
-│  │ - Highest/Lowest Close      │  │ ...                              │  │
-│  └─────────────────────────────┘  └──────────────────────────────────┘  │
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ Recent News                                                        │ │
-│  │ [Headline - Source • Date]                                         │ │
-│  │ [Summary...]                                                       │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────────────┤
-│  Stock Analyzer © 2026 | Data from Yahoo Finance & Finnhub              │
-└──────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  📈 Stock Analyzer                    Powered by .NET 8 + Plotly.js    [🌙/☀️]   │
+├─────────────────────────────────────────────────────────────────────┬────────────┤
+│  ┌───────────────────────────────────────────────────────────────┐  │ WATCHLISTS │
+│  │ [Search Box with Autocomplete] [Period ▼] [Chart ▼] [Analyze]│  │ ────────── │
+│  │ ☑ SMA 20   ☑ SMA 50   ☐ SMA 200   ☐ RSI   ☐ MACD            │  │ [+ New]    │
+│  └───────────────────────────────────────────────────────────────┘  │            │
+│                                                                      │ ▼ Tech     │
+│  ┌─────────────────────────────┐  ┌────────────────────────────┐   │   AAPL $150│
+│  │ SYMBOL                      │  │ Key Metrics                │   │   MSFT $380│
+│  │ Company Name                │  │ - Market Cap               │   │   GOOGL$140│
+│  │ Exchange • Currency         │  │ - P/E Ratio                │   │            │
+│  │         $XXX.XX [⭐ Add]    │  │ - 52W High/Low             │   │ ▶ Energy   │
+│  │         +X.XX (+X%)         │  │ - Avg Volume               │   │            │
+│  └─────────────────────────────┘  │ - Dividend Yield           │   │ ▶ Finance  │
+│                                   └────────────────────────────┘   │            │
+│  ┌───────────────────────────────────────────────────────────────┐  │            │
+│  │                    INTERACTIVE PLOTLY CHART                    │  │            │
+│  └───────────────────────────────────────────────────────────────┘  │            │
+│                                                                      │            │
+│  ┌─────────────────────────┐  ┌────────────────────────────────┐   │            │
+│  │ Performance             │  │ Significant Moves (>3%)        │   │            │
+│  │ - Total Return          │  │ Date | +X.XX%                  │   │            │
+│  │ - Volatility            │  │ Date | -X.XX%                  │   │            │
+│  └─────────────────────────┘  └────────────────────────────────┘   │            │
+│                                                                      │            │
+│  ┌───────────────────────────────────────────────────────────────┐  │            │
+│  │ Recent News - [Headline - Source • Date]                       │  │            │
+│  └───────────────────────────────────────────────────────────────┘  │            │
+├─────────────────────────────────────────────────────────────────────┴────────────┤
+│  Stock Analyzer © 2026 | Data from Yahoo Finance & Finnhub                       │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.2 Search Controls
@@ -525,6 +574,24 @@ The Stock Analyzer Dashboard allows users to:
 
 **Success Criteria:** News displays with working links
 
+### 5.4 Watchlist Management
+
+**Goal:** Create a watchlist and add stocks for quick monitoring
+
+**Steps:**
+1. User clicks "+ New List" in the watchlist sidebar
+2. User enters watchlist name (e.g., "Tech Stocks")
+3. User clicks "Create"
+4. System creates watchlist and displays it in sidebar
+5. User searches for and analyzes a stock (e.g., AAPL)
+6. User clicks "Add to Watchlist" button
+7. User selects "Tech Stocks" from dropdown
+8. System adds ticker to watchlist and displays current price
+9. User clicks ticker in watchlist
+10. System loads that stock in the analyzer
+
+**Success Criteria:** Watchlist persists after page refresh, ticker prices update
+
 ---
 
 ## 6. Business Rules
@@ -587,6 +654,24 @@ The Stock Analyzer Dashboard allows users to:
 | Analyze stock with no dividends | Dividend Yield shows "N/A" | |
 | No news available | Shows "No recent news available" | |
 
+### 7.4 Watchlist Functionality
+
+| Test | Expected Result | Pass/Fail |
+|------|-----------------|-----------|
+| Click "+ New List" | Modal opens for watchlist name | |
+| Create watchlist "Tech Stocks" | Watchlist appears in sidebar | |
+| Click watchlist name | Watchlist expands to show tickers | |
+| Load AAPL, click "Add to Watchlist" | Dropdown shows available watchlists | |
+| Select watchlist from dropdown | AAPL added to watchlist, shows price | |
+| Click ticker in watchlist | Stock analyzer loads that ticker | |
+| Hover ticker, click × button | Ticker removed from watchlist | |
+| Click edit (pencil) icon | Modal opens with current name | |
+| Rename watchlist to "Technology" | Name updates in sidebar | |
+| Click delete (trash) icon | Confirmation dialog appears | |
+| Confirm delete | Watchlist removed from sidebar | |
+| Refresh page | Watchlists persist from server | |
+| Add duplicate ticker | Ticker not added (already exists) | |
+
 ---
 
 ## 8. Constraints and Limitations
@@ -605,7 +690,7 @@ The Stock Analyzer Dashboard allows users to:
 |------------|-------------|--------|
 | News rate limit | 60 news requests per minute (Finnhub free tier) | Heavy use may cause news delays |
 | Browser-based | Requires modern browser with JavaScript | No mobile app version |
-| Single user | No multi-user or login support | Not for team/enterprise use |
+| Single user (current) | No authentication; multi-user architecture ready | Add auth layer for team use |
 
 ---
 
@@ -613,6 +698,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.9 | 2026-01-17 | Added Watchlist Management (FR-014): Create/rename/delete watchlists, add/remove tickers, sidebar UI, JSON persistence, multi-user ready | Claude |
 | 1.8 | 2026-01-17 | Added Bollinger Bands to Technical Indicators (FR-011): 20-period SMA with 2 std dev bands, overlaid on price chart with shaded fill | Claude |
 | 1.7 | 2026-01-17 | Added Documentation Page (FR-013): Tabbed docs viewer, Mermaid.js architecture diagrams, Fuse.js search, scroll spy TOC highlighting, resizable sidebar | Claude |
 | 1.6 | 2026-01-17 | Added Stock Comparison (FR-012): Compare to second stock/index with normalized % change | Claude |
