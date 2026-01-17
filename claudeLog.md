@@ -379,3 +379,6 @@ ZAP Warnings (informational):
 | - | Marked Slack messages #22, #23 as read | Success |
 | - | Added "Admit limitations" principle to CLAUDE.md | Success |
 | - | Updated testing requirements to use Playwright | Success |
+| - | Synced Slack, found messages #24 and #25 | Success |
+| - | Added "Use Chocolatey" principle to CLAUDE.md | Success |
+| - | Added CI/CD Jenkins task to whileYouWereAway.md | Success |

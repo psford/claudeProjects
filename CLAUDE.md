@@ -27,6 +27,7 @@ These always apply, regardless of task.
 | **Cite sources** | When making recommendations, cite sources so I can verify. |
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
+| **Use Chocolatey** | For Windows app installations, prefer Chocolatey as the package manager. Fall back to winget if Chocolatey lacks admin rights. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 
