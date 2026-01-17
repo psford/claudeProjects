@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/16/2026
+# Session State - Last Updated 01/16/2026 (11:45 PM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -8,7 +8,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 - **Name:** Patrick (psford)
 - **Background:** Financial services business analyst, experience with Matlab, Python, Ruby
-- **Preferred languages:** Python, TypeScript, HTML, CSS
+- **Preferred languages:** Python, TypeScript, HTML, CSS, C# (.NET)
 - **Email:** patrick@psford.com
 
 ---
@@ -18,29 +18,29 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ### Git
 - **Status:** Configured and working locally
 - **User:** psford <patrick@psford.com>
-- **Repository:** C:\Users\patri\Documents\claudeProjects (initialized)
+- **Repository:** C:\Users\patri\Documents\claudeProjects (master branch)
 
 ### GitHub
 - **Status:** NOT CONNECTED
 - **Issue:** Windows credential manager had memory errors; token auth also failed
+- **Pending:** CI/CD Jenkins workflow (depends on GitHub fix)
 
 ### Python
 - **Version:** 3.10.11
-- **Core packages:** yfinance, pandas, numpy, mplfinance, streamlit, plotly, finnhub-python, python-dotenv, streamlit-searchbox, bandit, slack-sdk, slack-bolt
+- **Core packages:** yfinance, pandas, numpy, slack-sdk, slack-bolt, playwright, openai-whisper, python-dotenv, bandit
 
 ### .NET
 - **Version:** .NET 8
 - **Project:** stock_analyzer_dotnet (ASP.NET Core minimal API + Tailwind CSS frontend)
 
 ### Slack Integration
-- **Status:** OPERATIONAL (reaction-only acknowledgment)
+- **Status:** OPERATIONAL
 - **Workspace:** psforddigitaldesign.slack.com
-- **Channel:** #claude-notifications
-- **Bot scopes:** chat:write, channels:history, reactions:write, app_mentions:read
-- **Send:** `python stock_analysis/helpers/slack_notify.py "message"`
-- **Listener:** `python stock_analysis/helpers/slack_listener.py --daemon`
-- **Check inbox:** `python stock_analysis/helpers/slack_listener.py --check`
-- **Sync history:** `python stock_analysis/helpers/slack_listener.py --sync`
+- **Channel:** #claude-notifications (C0A8LB49E1M)
+- **Poll for messages:** `python helpers/slack_listener.py --poll`
+- **Check inbox:** `python helpers/slack_listener.py --check`
+- **Send message:** `python helpers/slack_notify.py "message"`
+- **Add reaction:** `python helpers/slack_notify.py --react -c CHANNEL -ts TIMESTAMP`
 
 ---
 
@@ -48,111 +48,122 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ```
 claudeProjects/
-├── CLAUDE.md                        # Guidelines (40) + Deployment rules (D1-D5)
-├── claudeLog.md                     # Terminal action log
-├── sessionState.md                  # This file
-├── whileYouWereAway.md              # Task queue
-├── claude_01*.md                    # Versioned CLAUDE.md backups
+├── CLAUDE.md                    # Guidelines (9 themed sections)
+├── sessionState.md              # This file
+├── claudeLog.md                 # Action log
+├── whileYouWereAway.md          # Task queue
+├── .env                         # API keys (gitignored)
+├── slack_inbox.json             # Slack messages (gitignored)
 │
-├── stock_analysis/                  # Python Stock Analysis Project
-│   ├── .env                         # API keys (gitignored)
-│   ├── stock_analyzer.py
-│   ├── app.py                       # Streamlit dashboard
+├── helpers/                     # Reusable Python scripts
+│   ├── slack_listener.py        # Receive messages (--poll mode)
+│   ├── slack_notify.py          # Send messages & reactions
+│   ├── ui_test.py               # Playwright UI testing
+│   ├── speech_to_text.py        # Whisper transcription
+│   ├── Invoke-SpeechToText.ps1  # PowerShell wrapper
+│   ├── security_scan.py         # SAST (Bandit)
+│   └── checkpoint.py            # Session state saves
+│
+├── stock_analyzer_dotnet/       # Active .NET project
+│   ├── docs/
+│   │   ├── FUNCTIONAL_SPEC.md   # v1.8
+│   │   └── TECHNICAL_SPEC.md    # v1.12
 │   ├── ROADMAP.md
-│   ├── helpers/
-│   │   ├── slack_notify.py          # Send Slack messages
-│   │   ├── slack_listener.py        # Receive messages (reaction-only ack)
-│   │   ├── security_scan.py         # SAST (Bandit)
-│   │   ├── zap_scan.py              # DAST (ZAP)
-│   │   └── checkpoint.py
-│   └── security_reports/
+│   └── src/
+│       ├── StockAnalyzer.Api/   # Web API + frontend
+│       └── StockAnalyzer.Core/  # Business logic
 │
-└── stock_analyzer_dotnet/           # .NET Stock Analysis Project
-    ├── src/StockAnalyzer.Api/
-    │   ├── wwwroot/js/app.js        # Hover popups with cat images
-    │   └── appsettings.Development.json  # API keys (gitignored)
-    └── src/StockAnalyzer.Core/
+└── archive/                     # Archived projects
+    ├── stock_analysis_python/   # Original Python version
+    └── CLAUDE_v1_original.md    # Pre-reorganization guidelines
 ```
 
 ---
 
-## Guidelines Summary
+## CLAUDE.md Structure (Reorganized)
 
-**Total:** 41 general guidelines + 5 deployment rules
+9 themed sections replacing 46 numbered rules:
+1. **Principles** - Core values (challenge me, admit limitations, cite sources, etc.)
+2. **Session Protocol** - hello!/night!, checkpoints, between-tasks behavior
+3. **Development Workflow** - Planning, coding standards, testing (Playwright), pre-commit
+4. **Communication** - Research before asking, Slack integration
+5. **File Management** - Version control, backups, archiving
+6. **Security** - SAST/DAST scanning, pre-commit hooks
+7. **Project Files Reference** - Quick reference table
+8. **Stock Analyzer Specific** - Doc sync, build targets
+9. **Deprecated** - Archived items
 
-**#41 clarified:** TECHNICAL_SPEC.md must ALWAYS be updated for any code changes. FUNCTIONAL_SPEC.md only when user-facing behavior changes.
-
-**Key guidelines:**
-- **#15** Test before completion
-- **#22** Context efficiency (rules files are sacrosanct)
-- **#37** Proactive guideline updates from feedback
-- **#38** Test external services before integrating
-- **#41** Keep specs updated (FUNCTIONAL_SPEC.md, TECHNICAL_SPEC.md)
-
-**Deployment rules (new section):**
-- **D1** Kill before deploy - terminate old processes first
-- **D2** Redeploy after committing
-- **D3** Building ≠ Running
-- **D4** Test end-to-end after deployment
-- **D5** Deployment checklist
-
----
-
-## .NET Dashboard Features (COMPLETE)
-
-- ✅ REST API with stock data endpoints
-- ✅ Interactive Plotly charts (candlestick, line)
-- ✅ Moving average overlays (20, 50, 200-day)
-- ✅ Ticker search with autocomplete
-- ✅ Significant move markers (triangles)
-- ✅ Wikipedia-style hover popups with cat/dog images
-- ✅ Configurable threshold slider (3-10%)
-- ✅ Security scans passed (SAST: 0, DAST: 114 passed)
-- ✅ ML-based image processing (YOLOv8n ONNX for intelligent cropping)
+**Key additions this session:**
+- "Admit limitations" principle - If I can't do something, say so immediately
+- "Use Chocolatey" principle - Preferred Windows package manager
+- Playwright for UI testing (smoke, verify, screenshot)
+- React to ALL Slack messages when acknowledged (not just completed)
+- Between-tasks: Check Slack when idle
 
 ---
 
-## Pending Tasks (ROADMAP.md)
+## .NET Dashboard Features
 
-**.NET Dashboard:** All planned features complete!
-
-**Python Stock Analysis (from original ROADMAP):**
-| Task | Description | Status |
-|------|-------------|--------|
-| Technical indicators | RSI, MACD, Bollinger Bands | Planned |
-| Multi-stock comparison | Compare stocks on single chart | Planned |
-| Portfolio tracker | Track holdings, weighted returns | Planned |
-
-**Recently Completed:**
-- ✅ ML image processing (YOLOv8n ONNX for intelligent cropping)
-- ✅ SRI for Plotly.js CDN
-- ✅ Unit tests - xUnit test suite (67 tests)
-- ✅ Cats vs Dogs toggle
-- ✅ Image pre-caching
-- ✅ Hosting research (Oracle Cloud guide)
+- REST API with stock data endpoints
+- Interactive Plotly charts (candlestick, line)
+- Moving averages (SMA 20, 50, 200)
+- Technical indicators: RSI, MACD, Bollinger Bands
+- Stock comparison mode
+- Significant move markers
+- Cat/dog popup thumbnails
+- Dark mode toggle
+- Documentation page with search, TOC, architecture diagrams
 
 ---
 
-## Today's Session (01/16/2026)
+## New Tools This Session
 
-**Slack improvements:**
-- Added history sync (`--sync` flag) to catch missed messages
-- Changed from reply acknowledgment to ✅ reaction only
-- Fixed multiple listener issue (old code was handling messages)
+| Tool | Purpose | Usage |
+|------|---------|-------|
+| `ui_test.py` | Playwright UI testing | `python helpers/ui_test.py smoke http://localhost:5000` |
+| `speech_to_text.py` | Whisper transcription | `python helpers/speech_to_text.py --duration 10` |
+| Slack polling | Real-time message monitoring | `python helpers/slack_listener.py --poll` |
+| Slack reactions | Acknowledge messages | `--react -c CHANNEL -ts TIMESTAMP` |
 
-**New guidelines:**
-- #39: Slack reaction confirmation
-- #40: Review security tools on new frameworks
+---
 
-**New deployment section:**
-- D1-D5 deployment rules added
-- Moved #28 and #34 into deployment section
+## Pending Tasks (whileYouWereAway.md)
 
-**Commits today:**
-- b5bda78 - Add deployment section to CLAUDE.md
-- d03f7f0 - Replace Slack reply with reaction acknowledgment
-- a113d28 - Add guidelines #39-40 from Slack history
-- 54fa5ad - Add history sync to Slack listener
+- #8: Review roadmap and propose user stories
+- #10: .NET rewrite (DONE - all features implemented)
+- #12: CI/CD Jenkins workflow (blocked on GitHub)
+
+---
+
+## Today's Session Summary (01/16/2026)
+
+**Bollinger Bands:** Added to charts (model, service, UI, rendering)
+
+**Documentation page:** Already complete from previous session
+
+**CLAUDE.md reorganization:** 46 flat rules → 9 themed sections
+
+**New guidelines added:**
+- "Admit limitations" - Don't pretend to have capabilities I lack
+- "Use Chocolatey" - Preferred Windows package manager
+- "Between tasks" - Check Slack when idle
+- Updated Slack reaction rule - React to ALL messages when acknowledged
+
+**New tooling:**
+- Playwright for UI testing (screenshot, smoke, verify, check)
+- OpenAI Whisper for speech-to-text (local, free)
+- Slack polling mode (--poll, 10s interval)
+- Slack reaction support (--react)
+
+**Commits:**
+- c0d979f - Add Bollinger Bands technical indicator
+- 71ce069 - Reorganize CLAUDE.md: 46 rules → 9 themed sections
+- 8438744 - Add speech-to-text using OpenAI Whisper
+- edac024 - Add Playwright UI testing and Slack reaction support
+- 60a44b2 - Add capability honesty principle
+- 63c41e2 - Add Chocolatey preference
+- 887000f - Update Slack reaction guideline
+- 8b4b078 - Add polling mode to Slack listener
 
 ---
 
@@ -161,11 +172,12 @@ claudeProjects/
 **Say "hello!"** to restore context.
 
 Then:
-1. Check Slack: `python stock_analysis/helpers/slack_listener.py --sync`
-2. Check tasks: `whileYouWereAway.md`
+1. Check Slack: `python helpers/slack_listener.py --check`
+2. Start poll listener (optional): `python helpers/slack_listener.py --poll`
+3. Review tasks: Read `whileYouWereAway.md`
 
 To run .NET app:
-```
+```powershell
 cd stock_analyzer_dotnet
 dotnet run --project src/StockAnalyzer.Api
 # Visit http://localhost:5000
