@@ -1,7 +1,7 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.5
-**Last Updated:** 2026-01-16
+**Version:** 1.6
+**Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
 **Audience:** Business Users, Product Owners, QA Testers
@@ -280,6 +280,51 @@ The Stock Analyzer Dashboard allows users to:
 | MACD only | 68% | - | 28% | 550px |
 | Both indicators | 50% | 21% | 25% | 700px |
 
+### 3.12 Stock Comparison (FR-012)
+
+| ID | Requirement |
+|----|-------------|
+| FR-012.1 | The system must allow users to compare the primary stock to a second stock or index |
+| FR-012.2 | The system must provide a second search box labeled "Compare to (Optional)" |
+| FR-012.3 | The system must provide quick benchmark buttons for SPY, QQQ, and ^DJI |
+| FR-012.4 | The system must display both stocks as normalized percentage change from period start |
+| FR-012.5 | The system must disable technical indicators (RSI/MACD) when comparing |
+| FR-012.6 | The system must provide a "Clear Comparison" button to return to single-stock view |
+| FR-012.7 | The system must re-fetch comparison data when the time period changes |
+| FR-012.8 | The system must prevent comparing a stock to itself |
+| FR-012.9 | The comparison chart must show a zero baseline reference line |
+| FR-012.10 | The comparison chart title must show both stock symbols |
+
+**User Story:** *As an investor, I want to compare a stock's performance to major indices so that I can evaluate relative performance.*
+
+**Chart Layout (Comparison Mode):**
+
+```
+┌────────────────────────────────────────────────────┐
+│  AAPL vs SPY - 1Y                                  │
+├────────────────────────────────────────────────────┤
+│                                                    │
+│  % Change                                          │
+│     ^                                              │
+│     |    /\    /\          ── Primary (blue)       │
+│  +10|   /  \  /  \    ___  -- Compare (orange)     │
+│     |  /    \/    \  /   \                        │
+│    0|------------------\---/--- (baseline)        │
+│     |                   \/                        │
+│  -10|                                              │
+│     +---------------------------------> Date       │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+**Colors:**
+
+| Element | Color | Hex |
+|---------|-------|-----|
+| Primary stock line | Blue (solid) | #3B82F6 |
+| Comparison stock line | Orange (dashed) | #F59E0B |
+| Baseline (0%) | Gray (dotted) | Theme-dependent |
+
 ---
 
 ## 4. User Interface Specifications
@@ -338,6 +383,9 @@ The Stock Analyzer Dashboard allows users to:
 | SMA-200 | Checkbox | On/Off | Off |
 | RSI (14) | Checkbox | On/Off | Off |
 | MACD | Checkbox | On/Off | Off |
+| Compare to | Text input with autocomplete | Any ticker/company | Empty |
+| Quick Compare | Buttons | SPY, QQQ, ^DJI | - |
+| Clear Comparison | Button | Click to remove comparison | Hidden |
 | Threshold | Slider | 3% - 10% | 5% |
 | Show Markers | Checkbox | On/Off | On |
 | Popup Thumbnails | Radio | Cats, Dogs | Cats |
@@ -490,6 +538,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.6 | 2026-01-17 | Added Stock Comparison (FR-012): Compare to second stock/index with normalized % change | Claude |
 | 1.5 | 2026-01-16 | Added Technical Indicators (FR-011): RSI and MACD with dynamic chart panels | Claude |
 | 1.4 | 2026-01-16 | Added Dark Mode (FR-010) with system preference detection | Claude |
 | 1.1 | 2026-01-16 | Added cats/dogs toggle (FR-005.11), image pre-caching (FR-005.12-15) | Claude |

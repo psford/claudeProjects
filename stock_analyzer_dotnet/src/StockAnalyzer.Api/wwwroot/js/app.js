@@ -15,6 +15,11 @@ const App = {
     hideTimeout: null,
     isHoverCardHovered: false,
 
+    // Comparison feature state
+    comparisonTicker: null,
+    comparisonHistoryData: null,
+    compareSearchTimeout: null,
+
     // Image cache for pre-loaded animal images
     imageCache: {
         cats: [],
@@ -226,9 +231,22 @@ const App = {
         });
 
         // Period change
-        document.getElementById('period-select').addEventListener('change', (e) => {
+        document.getElementById('period-select').addEventListener('change', async (e) => {
             this.currentPeriod = e.target.value;
-            if (this.currentTicker) this.analyzeStock();
+            if (this.currentTicker) {
+                // If comparing, re-fetch comparison data with new period
+                if (this.comparisonTicker) {
+                    const comparisonTicker = this.comparisonTicker;
+                    // Clear comparison temporarily (analyzeStock will fetch primary data)
+                    this.comparisonTicker = null;
+                    this.comparisonHistoryData = null;
+                    await this.analyzeStock();
+                    // Re-fetch comparison with new period
+                    await this.setComparison(comparisonTicker);
+                } else {
+                    await this.analyzeStock();
+                }
+            }
         });
 
         // Chart type change
@@ -265,6 +283,60 @@ const App = {
             radio.addEventListener('change', (e) => {
                 this.currentAnimal = e.target.value;
             });
+        });
+
+        // Comparison search input
+        const compareInput = document.getElementById('compare-input');
+        const compareResults = document.getElementById('compare-results');
+
+        compareInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (this.compareSearchTimeout) clearTimeout(this.compareSearchTimeout);
+
+            if (query.length < 2) {
+                this.hideCompareResults();
+                return;
+            }
+
+            // Debounce search
+            this.compareSearchTimeout = setTimeout(() => this.performCompareSearch(query), 300);
+        });
+
+        compareInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.hideCompareResults();
+                const ticker = compareInput.value.trim().toUpperCase();
+                if (ticker && this.currentTicker) {
+                    this.setComparison(ticker);
+                }
+            }
+        });
+
+        compareInput.addEventListener('blur', () => {
+            setTimeout(() => this.hideCompareResults(), 200);
+        });
+
+        compareInput.addEventListener('focus', (e) => {
+            if (e.target.value.trim().length >= 2) {
+                this.performCompareSearch(e.target.value.trim());
+            }
+        });
+
+        // Quick compare benchmark buttons
+        document.querySelectorAll('[data-compare]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!this.currentTicker) {
+                    alert('Please analyze a stock first before comparing.');
+                    return;
+                }
+                const ticker = btn.dataset.compare;
+                this.setComparison(ticker);
+            });
+        });
+
+        // Clear comparison button
+        document.getElementById('clear-compare').addEventListener('click', () => {
+            this.clearComparison();
         });
 
         // Window resize handler for chart responsiveness
@@ -337,6 +409,145 @@ const App = {
      */
     hideSearchResults() {
         document.getElementById('search-results').classList.add('hidden');
+    },
+
+    /**
+     * Perform search for comparison autocomplete
+     */
+    async performCompareSearch(query) {
+        const loader = document.getElementById('compare-loader');
+        loader.classList.remove('hidden');
+
+        try {
+            const data = await API.search(query);
+            this.showCompareResults(data.results);
+        } catch (error) {
+            console.error('Comparison search failed:', error);
+            this.hideCompareResults();
+        } finally {
+            loader.classList.add('hidden');
+        }
+    },
+
+    /**
+     * Show comparison search results dropdown
+     */
+    showCompareResults(results) {
+        const container = document.getElementById('compare-results');
+
+        if (!results || results.length === 0) {
+            container.innerHTML = '<div class="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">No results found</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        container.innerHTML = results.map(r => `
+            <div class="compare-result px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0"
+                 data-symbol="${r.symbol}">
+                <div class="font-medium text-gray-900 dark:text-white">${r.symbol}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300">${r.shortName || r.longName || ''}</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">${r.exchange || ''} ${r.type ? `• ${r.type}` : ''}</div>
+            </div>
+        `).join('');
+
+        // Add click handlers to results
+        container.querySelectorAll('.compare-result').forEach(el => {
+            el.addEventListener('click', () => {
+                const symbol = el.dataset.symbol;
+                document.getElementById('compare-input').value = symbol;
+                this.hideCompareResults();
+                if (this.currentTicker) {
+                    this.setComparison(symbol);
+                }
+            });
+        });
+
+        container.classList.remove('hidden');
+    },
+
+    /**
+     * Hide comparison search results dropdown
+     */
+    hideCompareResults() {
+        document.getElementById('compare-results').classList.add('hidden');
+    },
+
+    /**
+     * Set comparison stock and fetch its data
+     */
+    async setComparison(ticker) {
+        ticker = ticker.toUpperCase();
+
+        // Prevent comparing stock to itself
+        if (ticker === this.currentTicker) {
+            alert('Cannot compare a stock to itself. Please choose a different symbol.');
+            return;
+        }
+
+        try {
+            document.getElementById('compare-input').value = ticker;
+
+            // Fetch comparison history data
+            this.comparisonHistoryData = await API.getHistory(ticker, this.currentPeriod);
+            this.comparisonTicker = ticker;
+
+            // Disable technical indicators (they don't make sense for comparison)
+            this.disableIndicators(true);
+
+            // Show clear button
+            document.getElementById('clear-compare').classList.remove('hidden');
+
+            // Re-render chart with comparison
+            this.renderChart();
+            this.attachChartHoverListeners();
+        } catch (error) {
+            console.error('Failed to fetch comparison data:', error);
+            alert(`Failed to load comparison data for ${ticker}`);
+            this.clearComparison();
+        }
+    },
+
+    /**
+     * Clear comparison and restore single-stock view
+     */
+    clearComparison() {
+        this.comparisonTicker = null;
+        this.comparisonHistoryData = null;
+        document.getElementById('compare-input').value = '';
+        document.getElementById('clear-compare').classList.add('hidden');
+
+        // Re-enable technical indicators
+        this.disableIndicators(false);
+
+        // Re-render chart without comparison
+        if (this.historyData) {
+            this.renderChart();
+            this.attachChartHoverListeners();
+        }
+    },
+
+    /**
+     * Enable or disable technical indicator checkboxes
+     */
+    disableIndicators(disabled) {
+        const rsiCheckbox = document.getElementById('show-rsi');
+        const macdCheckbox = document.getElementById('show-macd');
+        const rsiLabel = document.getElementById('rsi-label');
+        const macdLabel = document.getElementById('macd-label');
+
+        rsiCheckbox.disabled = disabled;
+        macdCheckbox.disabled = disabled;
+
+        if (disabled) {
+            // Uncheck and dim the indicators
+            rsiCheckbox.checked = false;
+            macdCheckbox.checked = false;
+            rsiLabel.classList.add('opacity-50', 'cursor-not-allowed');
+            macdLabel.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            rsiLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+            macdLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     },
 
     /**
@@ -551,16 +762,23 @@ const App = {
             significantMoves: this.significantMovesData,
             showMarkers: document.getElementById('show-markers').checked,
             showRsi: document.getElementById('show-rsi').checked,
-            showMacd: document.getElementById('show-macd').checked
+            showMacd: document.getElementById('show-macd').checked,
+            // Comparison data
+            comparisonData: this.comparisonHistoryData,
+            comparisonTicker: this.comparisonTicker
         };
 
-        // Adjust chart height based on enabled indicators
+        // Adjust chart height based on enabled indicators (only when not comparing)
         const chartEl = document.getElementById('stock-chart');
         const baseHeight = 400;
         const indicatorHeight = 150;
         let totalHeight = baseHeight;
-        if (options.showRsi) totalHeight += indicatorHeight;
-        if (options.showMacd) totalHeight += indicatorHeight;
+
+        // Only add indicator height if not comparing (indicators disabled during comparison)
+        if (!this.comparisonTicker) {
+            if (options.showRsi) totalHeight += indicatorHeight;
+            if (options.showMacd) totalHeight += indicatorHeight;
+        }
         chartEl.style.height = `${totalHeight}px`;
 
         Charts.renderStockChart('stock-chart', this.historyData, this.analysisData, options);

@@ -1,7 +1,7 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.7
-**Last Updated:** 2026-01-16
+**Version:** 1.8
+**Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
 
@@ -1079,6 +1079,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8 | 2026-01-17 | Stock comparison: normalizeToPercentChange helper, comparison mode in charts.js, benchmark buttons, indicator disable logic |
 | 1.7 | 2026-01-16 | Technical indicators: RSI and MACD calculation methods, RsiData/MacdData models, Plotly subplot support, dynamic chart resizing |
 | 1.6 | 2026-01-16 | Dark mode implementation with Tailwind CSS class-based theming, localStorage persistence |
 | 1.5 | 2026-01-16 | Added YTD and 10-year time periods to chart dropdown |

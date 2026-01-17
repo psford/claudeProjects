@@ -25,6 +25,21 @@ const Charts = {
     },
 
     /**
+     * Normalize data to percentage change from period start
+     * @param {Array} data - Array of OHLCV data points
+     * @returns {Array} Array of {date, value} with percentage change
+     */
+    normalizeToPercentChange(data) {
+        if (!data || data.length === 0) return [];
+        const baseValue = data[0].close;
+        if (baseValue === 0) return data.map(d => ({ date: d.date, value: 0 }));
+        return data.map(d => ({
+            date: d.date,
+            value: ((d.close - baseValue) / baseValue) * 100
+        }));
+    },
+
+    /**
      * Calculate subplot domains based on enabled indicators
      * @param {boolean} showRsi - Whether RSI panel is shown
      * @param {boolean} showMacd - Whether MACD panel is shown
@@ -84,18 +99,118 @@ const Charts = {
             significantMoves = null,
             showMarkers = true,
             showRsi = false,
-            showMacd = false
+            showMacd = false,
+            comparisonData = null,
+            comparisonTicker = null
         } = options;
 
         const data = historyData.data;
+        const themeColors = this.getThemeColors();
+
+        // Check if we're in comparison mode
+        const isComparing = comparisonData && comparisonTicker && comparisonData.data;
+
+        const traces = [];
+
+        // COMPARISON MODE: Show normalized percentage change for both stocks
+        if (isComparing) {
+            // Normalize primary stock to % change
+            const primaryNormalized = this.normalizeToPercentChange(data);
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: primaryNormalized.map(d => d.date),
+                y: primaryNormalized.map(d => d.value),
+                name: historyData.symbol,
+                line: { color: '#3B82F6', width: 2 },
+                yaxis: 'y'
+            });
+
+            // Normalize comparison stock to % change
+            const comparisonNormalized = this.normalizeToPercentChange(comparisonData.data);
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: comparisonNormalized.map(d => d.date),
+                y: comparisonNormalized.map(d => d.value),
+                name: comparisonTicker,
+                line: { color: '#F59E0B', width: 2, dash: 'dash' },
+                yaxis: 'y'
+            });
+
+            // Add zero reference line
+            const allDates = primaryNormalized.map(d => d.date);
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: [allDates[0], allDates[allDates.length - 1]],
+                y: [0, 0],
+                name: 'Baseline',
+                line: { color: themeColors.gridColor, width: 1, dash: 'dot' },
+                yaxis: 'y',
+                showlegend: false,
+                hoverinfo: 'skip'
+            });
+
+            // Build comparison layout
+            const layout = {
+                title: {
+                    text: `${historyData.symbol} vs ${comparisonTicker} - ${historyData.period.toUpperCase()}`,
+                    font: { size: 18, color: themeColors.text }
+                },
+                xaxis: {
+                    rangeslider: { visible: false },
+                    gridcolor: themeColors.gridColor,
+                    tickfont: { color: themeColors.axisColor },
+                    linecolor: themeColors.gridColor
+                },
+                yaxis: {
+                    title: { text: '% Change', font: { color: themeColors.axisColor, size: 11 } },
+                    gridcolor: themeColors.gridColor,
+                    tickfont: { color: themeColors.axisColor },
+                    linecolor: themeColors.gridColor,
+                    ticksuffix: '%',
+                    domain: [0, 1]
+                },
+                plot_bgcolor: themeColors.background,
+                paper_bgcolor: themeColors.paper,
+                showlegend: true,
+                legend: {
+                    orientation: 'h',
+                    yanchor: 'top',
+                    y: -0.08,
+                    xanchor: 'center',
+                    x: 0.5,
+                    font: { color: themeColors.axisColor, size: 10 }
+                },
+                autosize: true,
+                margin: { t: 50, r: 30, b: 60, l: 60, autoexpand: true },
+                hovermode: 'x unified'
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+            };
+
+            Plotly.newPlot(elementId, traces, layout, config).then(() => {
+                const chartEl = document.getElementById(elementId);
+                if (chartEl) {
+                    Plotly.Plots.resize(chartEl);
+                }
+            });
+
+            return; // Exit early for comparison mode
+        }
+
+        // SINGLE STOCK MODE: Normal rendering with candlestick/line and indicators
         const dates = data.map(d => d.date);
         const opens = data.map(d => d.open);
         const highs = data.map(d => d.high);
         const lows = data.map(d => d.low);
         const closes = data.map(d => d.close);
 
-        const traces = [];
-        const themeColors = this.getThemeColors();
         const domains = this.calculateSubplotDomains(showRsi, showMacd);
 
         // Main price chart (yaxis = y)
