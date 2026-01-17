@@ -60,6 +60,11 @@ When I say "hello!" at the start of a session:
 - Cold (fetch later): Reference material that might not be needed
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
+**Between tasks** - When a task is complete and looking for what to do next:
+- Check Slack for new messages/tasks
+- Review `whileYouWereAway.md` for pending items
+- Ask if there's anything else to work on
+
 ### Ending a Session ("night!")
 
 When I say "night!":

@@ -357,3 +357,18 @@ ZAP Warnings (informational):
 | - | Updated TECHNICAL_SPEC.md v1.12 (Bollinger Bands) | Success |
 | - | Reorganized CLAUDE.md (46 rules → 9 themed sections) | Success |
 | - | Archived original CLAUDE.md to archive/CLAUDE_v1_original.md | Success |
+
+---
+
+## 01/16/2026 (continued)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Verified documentation page already complete | Success |
+| - | Added "Between tasks" instruction to CLAUDE.md | Success |
+| - | Installed FFmpeg via winget | Success |
+| - | Installed OpenAI Whisper (local, free) | Success |
+| - | Created helpers/speech_to_text.py | Success |
+| - | Created helpers/Invoke-SpeechToText.ps1 wrapper | Success |
+| - | Verified audio devices accessible | Success |
+| - | Marked Slack message #23 as read | Success |
