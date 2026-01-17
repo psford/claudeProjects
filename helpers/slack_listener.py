@@ -142,6 +142,7 @@ def get_known_timestamps() -> set:
 def sync_history(channel_id: str = None, limit: int = 50) -> int:
     """
     Fetch recent channel history and add any missed messages.
+    Also fetches thread replies for messages with replies.
 
     Returns the number of new messages added.
     """
@@ -158,6 +159,40 @@ def sync_history(channel_id: str = None, limit: int = 50) -> int:
     known_ts = get_known_timestamps()
     new_count = 0
 
+    def process_message(msg, is_thread_reply=False):
+        """Process a single message and add to inbox if new."""
+        nonlocal new_count, known_ts
+
+        # Skip bot messages
+        if msg.get("bot_id") or msg.get("subtype") == "bot_message":
+            return
+
+        ts = msg.get("ts", "")
+
+        # Skip if we already have this message
+        if ts in known_ts:
+            return
+
+        user_id = msg.get("user", "unknown")
+        text = msg.get("text", "")
+
+        # Get user display name (use user_id if lookup fails)
+        try:
+            user_info = client.users_info(user=user_id)
+            user_name = user_info["user"].get("real_name") or user_info["user"].get("name") or user_id
+        except Exception:
+            user_name = user_id
+
+        # Add to inbox
+        add_message(
+            user=user_name,
+            channel=f"#{channel_id}",
+            text=text,
+            timestamp=ts
+        )
+        known_ts.add(ts)
+        new_count += 1
+
     try:
         # Fetch recent messages
         log(f"Syncing history from channel {channel_id}...")
@@ -168,35 +203,26 @@ def sync_history(channel_id: str = None, limit: int = 50) -> int:
 
         # Process messages (oldest first)
         for msg in reversed(messages):
-            # Skip bot messages
-            if msg.get("bot_id") or msg.get("subtype") == "bot_message":
-                continue
+            # Process the main message
+            process_message(msg)
 
-            ts = msg.get("ts", "")
-
-            # Skip if we already have this message
-            if ts in known_ts:
-                continue
-
-            user_id = msg.get("user", "unknown")
-            text = msg.get("text", "")
-
-            # Get user display name
-            try:
-                user_info = client.users_info(user=user_id)
-                user_name = user_info["user"].get("real_name") or user_info["user"].get("name") or user_id
-            except Exception:
-                user_name = user_id
-
-            # Add to inbox
-            add_message(
-                user=user_name,
-                channel=f"#{channel_id}",
-                text=text,
-                timestamp=ts
-            )
-            known_ts.add(ts)
-            new_count += 1
+            # Check if this message has thread replies
+            reply_count = msg.get("reply_count", 0)
+            if reply_count > 0:
+                thread_ts = msg.get("ts", "")
+                try:
+                    # Fetch thread replies
+                    replies_result = client.conversations_replies(
+                        channel=channel_id,
+                        ts=thread_ts,
+                        limit=100
+                    )
+                    replies = replies_result.get("messages", [])
+                    # Skip first message (it's the parent), process replies
+                    for reply in replies[1:]:
+                        process_message(reply, is_thread_reply=True)
+                except Exception as e:
+                    log(f"[WARN] Failed to fetch thread replies for {thread_ts}: {e}")
 
         # Update last sync timestamp
         if messages:
