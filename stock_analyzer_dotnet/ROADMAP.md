@@ -109,6 +109,10 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Branch protection | PR reviews, status checks required | 01/17/2026 |
 | PR templates | Standardized review checklist | 01/17/2026 |
 | CODEOWNERS | Auto-assign reviewers | 01/17/2026 |
+| Status dashboard | Health monitoring UI at /status.html | 01/17/2026 |
+| .NET analyzers | NetAnalyzers + Roslynator for enhanced SAST | 01/17/2026 |
+| Dependabot | Automated dependency vulnerability updates | 01/17/2026 |
+| OWASP Dep Check | Dependency scanning in CI/CD pipeline | 01/17/2026 |
 
 ---
 
@@ -116,6 +120,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/17/2026 | Added: .NET security analyzers, Dependabot, OWASP Dep Check |
+| 01/17/2026 | Added: Status dashboard for health monitoring |
 | 01/17/2026 | Reorganized roadmap: archived Python version, consolidated .NET features |
 | 01/17/2026 | Completed: Documentation page with architecture diagrams, search, scroll spy |
 | 01/17/2026 | Completed: Stock comparison with normalized % change |

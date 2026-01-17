@@ -21,13 +21,16 @@ These always apply, regardless of task.
 | Principle | Description |
 |-----------|-------------|
 | **Challenge me** | If I ask for something against best practices or introducing security vulnerabilities, push back. |
+| **Admit limitations** | If asked to do something I cannot actually do (e.g., "verify the UI looks correct" when I can't see rendered output), say so immediately and suggest mitigations. Never pretend to have capabilities I lack. |
 | **No illegal actions** | Never act illegally, period. |
 | **No paid services** | Never sign up for paid services on my behalf. |
 | **Cite sources** | When making recommendations, cite sources so I can verify. |
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
+| **Use Chocolatey** | For Windows app installations, prefer Chocolatey as the package manager. Fall back to winget if Chocolatey lacks admin rights. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
+| **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
 
 ---
 
@@ -60,6 +63,11 @@ When I say "hello!" at the start of a session:
 - Cold (fetch later): Reference material that might not be needed
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
+**Between tasks** - When a task is complete and looking for what to do next:
+- Check Slack for new messages/tasks
+- Review `whileYouWereAway.md` for pending items
+- Ask if there's anything else to work on
+
 ### Ending a Session ("night!")
 
 When I say "night!":
@@ -87,7 +95,10 @@ When I say "night!":
 
 **Testing requirements:**
 - Code compiling is NOT sufficient verification
-- For UI changes: Actually open the browser and verify it works
+- For UI changes: Use Playwright (`helpers/ui_test.py`) to verify:
+  - `smoke` - Page loads without JS errors
+  - `verify` - Required elements exist and are visible
+  - `screenshot` - Capture visual state for review
 - For interactive features: Verify the interaction produces expected results
 - For services: Test the full round-trip, not just that it starts
 - If unable to verify directly, say so and ask me to test
@@ -97,6 +108,12 @@ When I say "night!":
 - Check the response is what you expect
 - Have a fallback plan if unreliable
 - Never assume a service works - test it now
+
+**Spec updates - do them incrementally:**
+- Update specs AS you write code, not after
+- Don't batch spec updates at end of task - that leads to forgotten details
+- Each code commit should include its corresponding spec changes
+- If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
 
 ### Pre-Commit Checkpoint (CRITICAL)
 
@@ -163,7 +180,8 @@ Commit message should describe what was built AND documented.
 
 **Slack integration:**
 - Proactively restart the Slack listener if it appears disconnected
-- When completing a Slack task, add ✅ reaction to confirm
+- Add ✅ reaction to EVERY Slack message when acknowledged (not just when completed)
+- Mark message as `read: true` in `slack_inbox.json` after reacting
 - Keep `slack_inbox.json` and `slack_last_sync.txt` at project root
 
 ---
@@ -215,7 +233,7 @@ Commit message should describe what was built AND documented.
 | `ROADMAP.md` | Feature roadmap (in `stock_analyzer_dotnet/`) |
 | `FUNCTIONAL_SPEC.md` | User-facing requirements (in `stock_analyzer_dotnet/docs/`) |
 | `TECHNICAL_SPEC.md` | Technical implementation details (in `stock_analyzer_dotnet/docs/`) |
-| `helpers/` | Reusable Python scripts (Slack, security, checkpoints) |
+| `helpers/` | Reusable Python scripts (Slack, security, checkpoints, UI testing, speech-to-text) |
 | `.env` | API keys (Slack tokens, Finnhub) - not committed |
 
 ---

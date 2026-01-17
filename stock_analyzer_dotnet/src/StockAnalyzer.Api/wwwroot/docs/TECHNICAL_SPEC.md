@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.12
+**Version:** 1.15
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -1082,6 +1082,78 @@ docker exec -u root jenkins chmod 666 /var/run/docker.sock
 
 See `docs/CI_CD_SETUP.md` for complete setup and troubleshooting guide.
 
+#### CI/CD Security Tools
+
+**File:** `.github/workflows/codeql.yml`
+
+**CodeQL Analysis (GitHub Actions):**
+- Automated SAST for C# and Python code
+- Runs on push, PR, and weekly schedule
+- Results uploaded to GitHub Security tab
+- Uses `security-extended` query pack for comprehensive coverage
+
+**Triggers:**
+- Push to `master` branch
+- Pull requests to `master`
+- Weekly scheduled scan (Monday 6 AM UTC)
+
+**Security Toolchain:**
+| Tool | Type | Integration |
+|------|------|-------------|
+| CodeQL | SAST (multi-language) | GitHub Actions |
+| SecurityCodeScan.VS2019 | .NET SAST | Build-time analyzer |
+| Bandit | Python SAST | Pre-commit hook |
+| detect-secrets | Secrets detection | Pre-commit hook |
+| Dependabot | Dependency scanning | GitHub (enabled) |
+
+See `docs/CI_CD_SECURITY_PLAN.md` for the full security migration roadmap.
+
+### 9.5 Observability
+
+#### Structured Logging (Serilog)
+
+**Package:** `Serilog.AspNetCore` v10.0.0
+
+**Configuration:**
+- Console output with timestamp, level, message, and properties
+- File output to `logs/stockanalyzer-{date}.log` with daily rolling
+- 7-day log retention
+- Request logging middleware for HTTP request/response tracking
+
+**Log Levels:**
+- `Information` for application events
+- `Warning` for Microsoft framework (reduced noise)
+- `Fatal` for unhandled exceptions
+
+**Sample Output:**
+```
+[14:32:15 INF] Starting Stock Analyzer API {"Application":"StockAnalyzer"}
+[14:32:16 INF] HTTP GET /api/stock/AAPL responded 200 in 145.2341ms
+```
+
+#### Health Checks
+
+**Endpoints:**
+| Endpoint | Purpose | Checks |
+|----------|---------|--------|
+| `/health` | Full status | All checks with detailed JSON response |
+| `/health/live` | Liveness probe | Self-check only (is app running?) |
+| `/health/ready` | Readiness probe | External dependencies (Finnhub, Yahoo) |
+
+**Response Format:**
+```json
+{
+  "status": "Healthy",
+  "timestamp": "2026-01-17T14:32:15Z",
+  "duration": 245.5,
+  "checks": [
+    { "name": "self", "status": "Healthy", "duration": 0.1 },
+    { "name": "finnhub-api", "status": "Healthy", "duration": 120.3 },
+    { "name": "yahoo-finance", "status": "Healthy", "duration": 125.1 }
+  ]
+}
+```
+
 ---
 
 ## 10. Known Issues and Workarounds
@@ -1275,6 +1347,8 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.15 | 2026-01-17 | Observability: Serilog structured logging with file/console output, ASP.NET Core health checks (/health, /health/live, /health/ready) |
+| 1.14 | 2026-01-17 | CI/CD security: CodeQL workflow (.github/workflows/codeql.yml), security toolchain documentation, CI_CD_SECURITY_PLAN.md |
 | 1.13 | 2026-01-17 | CI/CD pipelines: GitHub Actions workflow (.github/workflows/dotnet-ci.yml), Jenkins pipeline (Jenkinsfile), Section 9.4 documentation |
 | 1.12 | 2026-01-17 | Bollinger Bands: BollingerData model, CalculateBollingerBands method (20-period SMA, 2 std dev), overlaid on price chart with shaded fill |
 | 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
