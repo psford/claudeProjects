@@ -1019,6 +1019,69 @@ stock_analyzer_dotnet/
         └── TestHelpers/
 ```
 
+### 9.4 CI/CD Pipelines
+
+The project has two CI/CD systems configured:
+
+#### GitHub Actions (Cloud)
+
+**File:** `.github/workflows/dotnet-ci.yml`
+
+**Triggers:**
+- Push to `master` branch (changes in `stock_analyzer_dotnet/**`)
+- Pull requests to `master`
+- Manual trigger via `workflow_dispatch`
+
+**Jobs:**
+1. `build-and-test` (Ubuntu) - Primary build, runs tests, uploads artifacts
+2. `build-windows` - Verification build on Windows
+
+**Stages:**
+```
+Checkout → Setup .NET 8.0 → Restore → Build (Release) → Test → Upload Artifacts
+```
+
+#### Jenkins (Local Docker)
+
+**File:** `Jenkinsfile` (project root)
+
+**Access:** http://localhost:8080/job/StockAnalyzer/
+
+**Prerequisites:**
+- Docker Desktop running
+- Jenkins container with Docker socket access
+
+**Pipeline Stages:**
+```groovy
+Checkout → Restore → Build → Test → Publish
+```
+
+**Docker Agent:** `mcr.microsoft.com/dotnet/sdk:8.0`
+
+**Starting Jenkins:**
+```bash
+docker run -d --name jenkins \
+  -p 8080:8080 -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  jenkins/jenkins:lts
+
+# Install Docker CLI and fix permissions
+docker exec -u root jenkins apt-get update && apt-get install -y docker.io
+docker exec -u root jenkins chmod 666 /var/run/docker.sock
+```
+
+**Required Plugins:**
+- `docker-workflow`
+- `docker-plugin`
+- `git`
+- `workflow-aggregator`
+
+**Credentials:**
+- `github-pat` - GitHub Personal Access Token for private repo access
+
+See `docs/CI_CD_SETUP.md` for complete setup and troubleshooting guide.
+
 ---
 
 ## 10. Known Issues and Workarounds
@@ -1212,6 +1275,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.13 | 2026-01-17 | CI/CD pipelines: GitHub Actions workflow (.github/workflows/dotnet-ci.yml), Jenkins pipeline (Jenkinsfile), Section 9.4 documentation |
 | 1.12 | 2026-01-17 | Bollinger Bands: BollingerData model, CalculateBollingerBands method (20-period SMA, 2 std dev), overlaid on price chart with shaded fill |
 | 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
 | 1.10 | 2026-01-17 | Architecture visualization: Mermaid.js diagrams loaded from external .mmd files (hybrid auto/manual approach), MIME type config for .mmd files, MSBuild target for diagrams directory |
