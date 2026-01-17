@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.12
+**Version:** 1.14
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -1082,6 +1082,32 @@ docker exec -u root jenkins chmod 666 /var/run/docker.sock
 
 See `docs/CI_CD_SETUP.md` for complete setup and troubleshooting guide.
 
+#### CI/CD Security Tools
+
+**File:** `.github/workflows/codeql.yml`
+
+**CodeQL Analysis (GitHub Actions):**
+- Automated SAST for C# and Python code
+- Runs on push, PR, and weekly schedule
+- Results uploaded to GitHub Security tab
+- Uses `security-extended` query pack for comprehensive coverage
+
+**Triggers:**
+- Push to `master` branch
+- Pull requests to `master`
+- Weekly scheduled scan (Monday 6 AM UTC)
+
+**Security Toolchain:**
+| Tool | Type | Integration |
+|------|------|-------------|
+| CodeQL | SAST (multi-language) | GitHub Actions |
+| SecurityCodeScan.VS2019 | .NET SAST | Build-time analyzer |
+| Bandit | Python SAST | Pre-commit hook |
+| detect-secrets | Secrets detection | Pre-commit hook |
+| Dependabot | Dependency scanning | GitHub (enabled) |
+
+See `docs/CI_CD_SECURITY_PLAN.md` for the full security migration roadmap.
+
 ---
 
 ## 10. Known Issues and Workarounds
@@ -1275,6 +1301,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.14 | 2026-01-17 | CI/CD security: CodeQL workflow (.github/workflows/codeql.yml), security toolchain documentation, CI_CD_SECURITY_PLAN.md |
 | 1.13 | 2026-01-17 | CI/CD pipelines: GitHub Actions workflow (.github/workflows/dotnet-ci.yml), Jenkins pipeline (Jenkinsfile), Section 9.4 documentation |
 | 1.12 | 2026-01-17 | Bollinger Bands: BollingerData model, CalculateBollingerBands method (20-period SMA, 2 std dev), overlaid on price chart with shaded fill |
 | 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
