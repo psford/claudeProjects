@@ -372,3 +372,8 @@ ZAP Warnings (informational):
 | - | Created helpers/Invoke-SpeechToText.ps1 wrapper | Success |
 | - | Verified audio devices accessible | Success |
 | - | Marked Slack message #23 as read | Success |
+| - | Installed Playwright and Chromium browser | Success |
+| - | Created helpers/ui_test.py (screenshot, smoke test, element verification) | Success |
+| - | Added --react option to slack_notify.py | Success |
+| - | Tested UI helper with Stock Analyzer page | Success |
+| - | Marked Slack messages #22, #23 as read | Success |

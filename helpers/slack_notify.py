@@ -40,6 +40,33 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 
+def add_reaction(channel: str, timestamp: str, emoji: str = "white_check_mark") -> dict:
+    """
+    Add a reaction to a Slack message.
+
+    Args:
+        channel: Channel ID (e.g., C0A8LB49E1M)
+        timestamp: Message timestamp (e.g., 1768621161.846209)
+        emoji: Emoji name without colons (default: white_check_mark)
+
+    Returns:
+        Slack API response dict
+    """
+    token = os.getenv("SLACK_BOT_TOKEN")
+    if not token:
+        raise ValueError("SLACK_BOT_TOKEN not found in environment. Check .env file.")
+
+    client = WebClient(token=token)
+
+    response = client.reactions_add(
+        channel=channel,
+        timestamp=timestamp,
+        name=emoji
+    )
+
+    return response
+
+
 def send_slack_message(
     message: str,
     channel: str = "claude-notifications",
@@ -131,8 +158,40 @@ def main():
         action="store_true",
         help="Send a test message"
     )
+    parser.add_argument(
+        "--react",
+        action="store_true",
+        help="Add a reaction instead of sending a message"
+    )
+    parser.add_argument(
+        "--timestamp", "-ts",
+        help="Message timestamp for reaction (required with --react)"
+    )
+    parser.add_argument(
+        "--emoji", "-e",
+        default="white_check_mark",
+        help="Emoji name for reaction (default: white_check_mark)"
+    )
 
     args = parser.parse_args()
+
+    # Handle reaction mode
+    if args.react:
+        if not args.timestamp:
+            parser.error("--timestamp required with --react")
+        try:
+            # Channel needs to be ID format for reactions
+            channel_id = args.channel.replace("#", "")
+            response = add_reaction(
+                channel=channel_id,
+                timestamp=args.timestamp,
+                emoji=args.emoji
+            )
+            print(f"[OK] Added :{args.emoji}: reaction")
+            return 0
+        except SlackApiError as e:
+            print(f"[ERROR] Slack API error: {e.response['error']}")
+            return 1
 
     # Handle test mode
     if args.test:
