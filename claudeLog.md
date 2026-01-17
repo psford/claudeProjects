@@ -377,3 +377,5 @@ ZAP Warnings (informational):
 | - | Added --react option to slack_notify.py | Success |
 | - | Tested UI helper with Stock Analyzer page | Success |
 | - | Marked Slack messages #22, #23 as read | Success |
+| - | Added "Admit limitations" principle to CLAUDE.md | Success |
+| - | Updated testing requirements to use Playwright | Success |
