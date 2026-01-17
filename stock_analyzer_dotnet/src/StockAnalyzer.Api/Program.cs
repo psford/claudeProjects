@@ -188,7 +188,7 @@ app.MapGet("/api/stock/{ticker}/significant", async (
 .Produces<StockAnalyzer.Core.Models.SignificantMovesResult>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
-// GET /api/stock/{ticker}/analysis - Get performance metrics and moving averages
+// GET /api/stock/{ticker}/analysis - Get performance metrics, moving averages, and technical indicators
 app.MapGet("/api/stock/{ticker}/analysis", async (
     string ticker,
     string? period,
@@ -201,13 +201,17 @@ app.MapGet("/api/stock/{ticker}/analysis", async (
 
     var movingAverages = analysisService.CalculateMovingAverages(history.Data);
     var performance = analysisService.CalculatePerformance(history.Data);
+    var rsi = analysisService.CalculateRsi(history.Data);
+    var macd = analysisService.CalculateMacd(history.Data);
 
     return Results.Ok(new
     {
         symbol = ticker.ToUpper(),
         period = period ?? "1y",
         performance,
-        movingAverages = movingAverages.TakeLast(30) // Last 30 days of MAs
+        movingAverages,
+        rsi,
+        macd
     });
 })
 .WithName("GetStockAnalysis")

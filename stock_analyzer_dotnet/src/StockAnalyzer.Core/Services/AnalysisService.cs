@@ -156,4 +156,178 @@ public class AnalysisService
         // Annualize (assuming 252 trading days)
         return stdDev * (decimal)Math.Sqrt(252) * 100;
     }
+
+    /// <summary>
+    /// Calculate RSI (Relative Strength Index) for historical data.
+    /// Uses Wilder's smoothing method with default 14-period.
+    /// </summary>
+    /// <param name="data">OHLCV data points</param>
+    /// <param name="period">RSI period (default 14)</param>
+    /// <returns>List of RSI data points</returns>
+    public List<RsiData> CalculateRsi(List<OhlcvData> data, int period = 14)
+    {
+        var result = new List<RsiData>();
+
+        if (data.Count < period + 1)
+        {
+            // Not enough data - return all nulls
+            return data.Select(d => new RsiData { Date = d.Date, Rsi = null }).ToList();
+        }
+
+        var closes = data.Select(d => d.Close).ToList();
+
+        // Calculate price changes (gains and losses)
+        var gains = new List<decimal>();
+        var losses = new List<decimal>();
+
+        for (int i = 1; i < closes.Count; i++)
+        {
+            var change = closes[i] - closes[i - 1];
+            gains.Add(change > 0 ? change : 0);
+            losses.Add(change < 0 ? Math.Abs(change) : 0);
+        }
+
+        // Initialize with SMA for first RSI value
+        decimal avgGain = gains.Take(period).Average();
+        decimal avgLoss = losses.Take(period).Average();
+
+        // First (period) entries have null RSI
+        for (int i = 0; i < period; i++)
+        {
+            result.Add(new RsiData { Date = data[i].Date, Rsi = null });
+        }
+
+        // Calculate RSI using Wilder's smoothing method
+        for (int i = period; i < data.Count; i++)
+        {
+            if (i > period)
+            {
+                // Wilder's smoothing: avgGain = (prevAvgGain * (period-1) + currentGain) / period
+                avgGain = (avgGain * (period - 1) + gains[i - 1]) / period;
+                avgLoss = (avgLoss * (period - 1) + losses[i - 1]) / period;
+            }
+
+            decimal rsi;
+            if (avgLoss == 0)
+            {
+                rsi = 100; // No losses means RSI = 100
+            }
+            else
+            {
+                var rs = avgGain / avgLoss;
+                rsi = 100 - (100 / (1 + rs));
+            }
+
+            result.Add(new RsiData { Date = data[i].Date, Rsi = rsi });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Calculate MACD (Moving Average Convergence Divergence) for historical data.
+    /// Uses standard parameters: 12-period fast EMA, 26-period slow EMA, 9-period signal.
+    /// </summary>
+    /// <param name="data">OHLCV data points</param>
+    /// <param name="fastPeriod">Fast EMA period (default 12)</param>
+    /// <param name="slowPeriod">Slow EMA period (default 26)</param>
+    /// <param name="signalPeriod">Signal line EMA period (default 9)</param>
+    /// <returns>List of MACD data points</returns>
+    public List<MacdData> CalculateMacd(
+        List<OhlcvData> data,
+        int fastPeriod = 12,
+        int slowPeriod = 26,
+        int signalPeriod = 9)
+    {
+        var result = new List<MacdData>();
+        var closes = data.Select(d => d.Close).ToList();
+
+        // Calculate EMAs
+        var emaFast = CalculateEma(closes, fastPeriod);
+        var emaSlow = CalculateEma(closes, slowPeriod);
+
+        // Calculate MACD line (fast EMA - slow EMA)
+        var macdLine = new List<decimal?>();
+        for (int i = 0; i < closes.Count; i++)
+        {
+            if (emaFast[i].HasValue && emaSlow[i].HasValue)
+                macdLine.Add(emaFast[i]!.Value - emaSlow[i]!.Value);
+            else
+                macdLine.Add(null);
+        }
+
+        // Calculate signal line (EMA of MACD line)
+        // For EMA calculation, we need non-null values, so use 0 for null entries
+        var macdValues = macdLine.Select(m => m ?? 0m).ToList();
+        var signalLineRaw = CalculateEma(macdValues, signalPeriod);
+
+        // Build result - signal line is only valid after we have valid MACD values
+        var firstValidMacdIndex = macdLine.FindIndex(m => m.HasValue);
+
+        for (int i = 0; i < data.Count; i++)
+        {
+            decimal? signal = null;
+            decimal? histogram = null;
+
+            // Signal line is valid after (slowPeriod - 1) + (signalPeriod - 1) periods
+            var signalStartIndex = slowPeriod - 1 + signalPeriod - 1;
+            if (i >= signalStartIndex && macdLine[i].HasValue && signalLineRaw[i].HasValue)
+            {
+                signal = signalLineRaw[i];
+                histogram = macdLine[i]!.Value - signal.Value;
+            }
+
+            result.Add(new MacdData
+            {
+                Date = data[i].Date,
+                MacdLine = macdLine[i],
+                SignalLine = signal,
+                Histogram = histogram
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Calculate Exponential Moving Average (EMA).
+    /// </summary>
+    /// <param name="values">Price values</param>
+    /// <param name="period">EMA period</param>
+    /// <returns>List of EMA values (null for insufficient data)</returns>
+    private static List<decimal?> CalculateEma(List<decimal> values, int period)
+    {
+        var result = new List<decimal?>();
+
+        if (values.Count < period)
+        {
+            return values.Select(_ => (decimal?)null).ToList();
+        }
+
+        // EMA multiplier: 2 / (period + 1)
+        decimal multiplier = 2.0m / (period + 1);
+
+        // Start with SMA for initial EMA value
+        decimal ema = values.Take(period).Average();
+
+        for (int i = 0; i < values.Count; i++)
+        {
+            if (i < period - 1)
+            {
+                result.Add(null);
+            }
+            else if (i == period - 1)
+            {
+                result.Add(ema);
+            }
+            else
+            {
+                // EMA = (Current Price - Previous EMA) * Multiplier + Previous EMA
+                ema = (values[i] - ema) * multiplier + ema;
+                result.Add(ema);
+            }
+        }
+
+        return result;
+    }
 }

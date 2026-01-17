@@ -239,6 +239,11 @@ const App = {
             document.getElementById(id).addEventListener('change', () => this.updateChart());
         });
 
+        // Technical indicator toggles (RSI, MACD)
+        ['show-rsi', 'show-macd'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => this.updateChart());
+        });
+
         // Threshold slider
         const thresholdSlider = document.getElementById('threshold-slider');
         const thresholdValue = document.getElementById('threshold-value');
@@ -544,8 +549,19 @@ const App = {
             showMa50: document.getElementById('ma-50').checked,
             showMa200: document.getElementById('ma-200').checked,
             significantMoves: this.significantMovesData,
-            showMarkers: document.getElementById('show-markers').checked
+            showMarkers: document.getElementById('show-markers').checked,
+            showRsi: document.getElementById('show-rsi').checked,
+            showMacd: document.getElementById('show-macd').checked
         };
+
+        // Adjust chart height based on enabled indicators
+        const chartEl = document.getElementById('stock-chart');
+        const baseHeight = 400;
+        const indicatorHeight = 150;
+        let totalHeight = baseHeight;
+        if (options.showRsi) totalHeight += indicatorHeight;
+        if (options.showMacd) totalHeight += indicatorHeight;
+        chartEl.style.height = `${totalHeight}px`;
 
         Charts.renderStockChart('stock-chart', this.historyData, this.analysisData, options);
     },

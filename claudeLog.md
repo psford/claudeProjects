@@ -251,3 +251,40 @@ ZAP Warnings (informational):
 | - | Added localStorage persistence for dark mode | Success |
 | - | Added system preference detection (prefers-color-scheme) | Success |
 | - | Built and started server | Success (localhost:5000) |
+| - | User tested dark mode | Success |
+| - | Updated FUNCTIONAL_SPEC.md v1.4 (FR-010 Dark Mode) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.6 (Dark Mode implementation) | Success |
+| - | Committed dark mode feature | Success (f56771f) |
+
+---
+
+## 01/17/2026
+
+### Session Continuation (context compaction recovery)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Continued RSI/MACD implementation from previous session | Success |
+| - | Added unit tests for RSI calculation (6 tests) | Success |
+| - | Added unit tests for MACD calculation (7 tests) | Success |
+| - | Ran all tests (77 passed, 3 skipped) | Success |
+| - | Updated FUNCTIONAL_SPEC.md v1.5 (FR-011 Technical Indicators) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.7 (RSI/MACD calculations, models) | Success |
+| - | Started server and tested /api/stock/AAPL/analysis endpoint | Success |
+| - | Verified RSI values (0-100 range, ~26 for recent oversold AAPL) | Success |
+| - | Verified MACD values (line, signal, histogram all correct) | Success |
+
+### RSI/MACD Feature Implementation Summary
+
+**Backend:**
+- Created TechnicalIndicators.cs (RsiData, MacdData records)
+- Added CalculateEma(), CalculateRsi(), CalculateMacd() to AnalysisService
+- Updated /analysis API endpoint to include rsi and macd arrays
+
+**Frontend:**
+- Added RSI and MACD toggle checkboxes to index.html
+- Updated app.js with event handlers and dynamic chart height
+- Updated charts.js with subplot support (yaxis2 for RSI, yaxis3 for MACD)
+
+**Tests:**
+- 13 new unit tests for RSI and MACD calculations

@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.6
+**Version:** 1.7
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -30,6 +30,9 @@ This specification covers:
 |------|------------|
 | OHLCV | Open, High, Low, Close, Volume - standard price data format |
 | SMA | Simple Moving Average - trend indicator calculated over N periods |
+| EMA | Exponential Moving Average - weighted moving average with more recent emphasis |
+| RSI | Relative Strength Index - momentum oscillator measuring overbought/oversold conditions (0-100) |
+| MACD | Moving Average Convergence Divergence - trend-following momentum indicator |
 | Ticker | Unique stock symbol (e.g., AAPL for Apple Inc.) |
 | Significant Move | Daily price change of ±3% or greater (configurable) |
 | Minimal APIs | ASP.NET Core lightweight API approach without controllers |
@@ -338,7 +341,29 @@ public record SignificantMove
 }
 ```
 
-### 4.5 CompanyProfile
+### 4.5 RsiData
+
+```csharp
+public record RsiData
+{
+    public required DateTime Date { get; init; }
+    public decimal? Rsi { get; init; }  // 0-100, null when insufficient data
+}
+```
+
+### 4.6 MacdData
+
+```csharp
+public record MacdData
+{
+    public required DateTime Date { get; init; }
+    public decimal? MacdLine { get; init; }     // Fast EMA - Slow EMA
+    public decimal? SignalLine { get; init; }   // 9-period EMA of MACD line
+    public decimal? Histogram { get; init; }    // MACD line - Signal line
+}
+```
+
+### 4.7 CompanyProfile
 
 ```csharp
 public record CompanyProfile
@@ -425,6 +450,33 @@ Used to look up SEDOL for UK/Irish securities from ISIN.
 | `CalculateMovingAverages(data)` | Calculate SMA-20, SMA-50, SMA-200 |
 | `CalculatePerformance(data)` | Calculate return, volatility, high/low |
 | `DetectSignificantMovesAsync(...)` | Find moves exceeding threshold |
+| `CalculateRsi(data, period)` | Calculate RSI using Wilder's smoothing |
+| `CalculateMacd(data, fast, slow, signal)` | Calculate MACD line, signal line, histogram |
+| `CalculateEma(values, period)` | Private helper for EMA calculation |
+
+**RSI Calculation (Wilder's Smoothing Method):**
+```
+1. Calculate price changes (gains and losses)
+2. Initial average: SMA of first N gains/losses
+3. Subsequent: avgGain = (prevAvgGain × (period-1) + currentGain) / period
+4. RS = avgGain / avgLoss
+5. RSI = 100 - (100 / (1 + RS))
+```
+
+**MACD Calculation:**
+```
+1. Fast EMA = 12-period EMA of close prices
+2. Slow EMA = 26-period EMA of close prices
+3. MACD Line = Fast EMA - Slow EMA
+4. Signal Line = 9-period EMA of MACD Line
+5. Histogram = MACD Line - Signal Line
+```
+
+**EMA Formula:**
+```
+Multiplier = 2 / (period + 1)
+EMA = (Current Price - Previous EMA) × Multiplier + Previous EMA
+```
 
 ### 5.4 ImageProcessingService
 
@@ -713,11 +765,11 @@ tests/
 
 | Category | Tests | Description |
 |----------|-------|-------------|
-| AnalysisService | 14 | Moving averages, significant moves, performance calculations |
+| AnalysisService | 27 | Moving averages, significant moves, performance, RSI, MACD calculations |
 | NewsService | 11 | HTTP mocking, date range handling, JSON parsing |
 | StockDataService | 12 | Query validation, period mapping, dividend yield fix |
 | Model Calculations | 27 | Calculated properties on record types |
-| **Total** | **64** | Plus 3 skipped integration tests |
+| **Total** | **77** | Plus 3 skipped integration tests |
 
 ### 8.4 Running Tests
 
@@ -818,7 +870,8 @@ stock_analyzer_dotnet/
 │       │   ├── HistoricalData.cs
 │       │   ├── NewsItem.cs
 │       │   ├── SearchResult.cs
-│       │   └── SignificantMove.cs
+│       │   ├── SignificantMove.cs
+│       │   └── TechnicalIndicators.cs    # RsiData, MacdData records
 │       └── Services/
 │           ├── StockDataService.cs
 │           ├── NewsService.cs
@@ -1026,6 +1079,8 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7 | 2026-01-16 | Technical indicators: RSI and MACD calculation methods, RsiData/MacdData models, Plotly subplot support, dynamic chart resizing |
+| 1.6 | 2026-01-16 | Dark mode implementation with Tailwind CSS class-based theming, localStorage persistence |
 | 1.5 | 2026-01-16 | Added YTD and 10-year time periods to chart dropdown |
 | 1.4 | 2026-01-16 | Company profile integration: ISIN/CUSIP/SEDOL identifiers, company bio, Finnhub profile endpoint, OpenFIGI SEDOL lookup, chart legend/width fixes |
 | 1.3 | 2026-01-16 | Server-side ML image processing with YOLOv8n ONNX, ImageProcessingService, ImageCacheService, new /api/images/* endpoints |

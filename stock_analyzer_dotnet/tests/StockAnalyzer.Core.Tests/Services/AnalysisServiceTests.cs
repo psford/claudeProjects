@@ -331,4 +331,271 @@ public class AnalysisServiceTests
     }
 
     #endregion
+
+    #region CalculateRsi Tests
+
+    [Fact]
+    public void CalculateRsi_WithSufficientData_ReturnsValidRsiValues()
+    {
+        // Arrange - Create 30 data points (more than 14 period)
+        var data = TestDataFactory.CreateOhlcvDataList(30);
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert
+        result.Should().HaveCount(30);
+
+        // First 14 values should be null (not enough data)
+        for (int i = 0; i < 14; i++)
+        {
+            result[i].Rsi.Should().BeNull($"index {i} should not have enough data for RSI");
+        }
+
+        // Values after index 14 should have RSI values
+        for (int i = 14; i < result.Count; i++)
+        {
+            result[i].Rsi.Should().NotBeNull($"index {i} should have RSI value");
+        }
+    }
+
+    [Fact]
+    public void CalculateRsi_WithInsufficientData_ReturnsAllNulls()
+    {
+        // Arrange - Only 10 data points (less than 14 + 1 period)
+        var data = TestDataFactory.CreateOhlcvDataList(10);
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert
+        result.Should().HaveCount(10);
+        result.Should().AllSatisfy(r => r.Rsi.Should().BeNull());
+    }
+
+    [Fact]
+    public void CalculateRsi_ValuesAreInValidRange()
+    {
+        // Arrange - Create data with various price movements
+        var data = new List<OhlcvData>();
+        var basePrice = 100m;
+
+        // Create 30 days with alternating gains and losses
+        for (int i = 0; i < 30; i++)
+        {
+            var change = i % 2 == 0 ? 2m : -1m; // Alternating +2, -1
+            var close = basePrice + (i * 0.5m) + change;
+            data.Add(TestDataFactory.CreateOhlcvData(
+                date: DateTime.Today.AddDays(-30 + i),
+                open: basePrice + (i * 0.5m),
+                high: close + 1,
+                low: close - 1,
+                close: close
+            ));
+        }
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert - All non-null RSI values should be between 0 and 100
+        var validRsiValues = result.Where(r => r.Rsi.HasValue).Select(r => r.Rsi!.Value);
+        validRsiValues.Should().AllSatisfy(rsi =>
+        {
+            rsi.Should().BeGreaterOrEqualTo(0);
+            rsi.Should().BeLessOrEqualTo(100);
+        });
+    }
+
+    [Fact]
+    public void CalculateRsi_WithAllGains_Returns100()
+    {
+        // Arrange - Create data with only gains (price increases every day)
+        var data = new List<OhlcvData>();
+        for (int i = 0; i < 20; i++)
+        {
+            var close = 100m + (i * 2m); // Increase by 2 each day
+            data.Add(TestDataFactory.CreateOhlcvData(
+                date: DateTime.Today.AddDays(-20 + i),
+                open: close - 1,
+                high: close + 1,
+                low: close - 2,
+                close: close
+            ));
+        }
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert - RSI should be 100 when there are only gains (no losses)
+        var lastRsi = result.Last().Rsi;
+        lastRsi.Should().NotBeNull();
+        lastRsi.Should().Be(100m, "RSI with all gains and no losses should be 100");
+    }
+
+    [Fact]
+    public void CalculateRsi_DatesMatchInput()
+    {
+        // Arrange
+        var data = TestDataFactory.CreateOhlcvDataList(20);
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert
+        result.Should().HaveCount(20);
+        for (int i = 0; i < 20; i++)
+        {
+            result[i].Date.Should().Be(data[i].Date);
+        }
+    }
+
+    [Fact]
+    public void CalculateRsi_WithEmptyData_ReturnsEmptyList()
+    {
+        // Arrange
+        var data = new List<OhlcvData>();
+
+        // Act
+        var result = _sut.CalculateRsi(data);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region CalculateMacd Tests
+
+    [Fact]
+    public void CalculateMacd_WithSufficientData_ReturnsAllComponents()
+    {
+        // Arrange - Create 50 data points (enough for 26-period slow EMA + 9-period signal)
+        var data = TestDataFactory.CreateOhlcvDataList(50);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        result.Should().HaveCount(50);
+
+        // After enough periods, all components should be present
+        var lastData = result.Last();
+        lastData.MacdLine.Should().NotBeNull("MACD line should be available at end");
+        lastData.SignalLine.Should().NotBeNull("Signal line should be available at end");
+        lastData.Histogram.Should().NotBeNull("Histogram should be available at end");
+    }
+
+    [Fact]
+    public void CalculateMacd_HistogramEqualsLineMinusSignal()
+    {
+        // Arrange
+        var data = TestDataFactory.CreateOhlcvDataList(50);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert - For all points with complete data, histogram = MACD - Signal
+        var completeData = result.Where(m =>
+            m.MacdLine.HasValue && m.SignalLine.HasValue && m.Histogram.HasValue);
+
+        completeData.Should().AllSatisfy(m =>
+        {
+            var expectedHistogram = m.MacdLine!.Value - m.SignalLine!.Value;
+            m.Histogram.Should().BeApproximately(expectedHistogram, 0.0001m,
+                "Histogram should equal MACD line minus Signal line");
+        });
+    }
+
+    [Fact]
+    public void CalculateMacd_WithInsufficientData_ReturnsNullsForEarly()
+    {
+        // Arrange - Create 50 data points
+        var data = TestDataFactory.CreateOhlcvDataList(50);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        // First 25 values should have null MACD line (need 26 periods for slow EMA)
+        for (int i = 0; i < 25; i++)
+        {
+            result[i].MacdLine.Should().BeNull($"index {i} should not have MACD line (need 26 periods)");
+        }
+
+        // Index 25 (26th point) should have MACD line
+        result[25].MacdLine.Should().NotBeNull("index 25 should have MACD line");
+    }
+
+    [Fact]
+    public void CalculateMacd_SignalLineStartsAfterMacdLine()
+    {
+        // Arrange
+        var data = TestDataFactory.CreateOhlcvDataList(50);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        // Signal line needs 26 periods (slow EMA) + 9 periods - 1 = 33 data points to start
+        var signalStartIndex = 26 - 1 + 9 - 1; // = 33
+
+        for (int i = 0; i < signalStartIndex; i++)
+        {
+            result[i].SignalLine.Should().BeNull($"index {i} should not have signal line yet");
+        }
+
+        result[signalStartIndex].SignalLine.Should().NotBeNull(
+            $"index {signalStartIndex} should have signal line");
+    }
+
+    [Fact]
+    public void CalculateMacd_DatesMatchInput()
+    {
+        // Arrange
+        var data = TestDataFactory.CreateOhlcvDataList(40);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        result.Should().HaveCount(40);
+        for (int i = 0; i < 40; i++)
+        {
+            result[i].Date.Should().Be(data[i].Date);
+        }
+    }
+
+    [Fact]
+    public void CalculateMacd_WithEmptyData_ReturnsEmptyList()
+    {
+        // Arrange
+        var data = new List<OhlcvData>();
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CalculateMacd_WithTooFewDataPoints_ReturnsAllNulls()
+    {
+        // Arrange - Only 10 data points (not enough for 12-period fast EMA)
+        var data = TestDataFactory.CreateOhlcvDataList(10);
+
+        // Act
+        var result = _sut.CalculateMacd(data);
+
+        // Assert
+        result.Should().HaveCount(10);
+        result.Should().AllSatisfy(m =>
+        {
+            m.MacdLine.Should().BeNull();
+            m.SignalLine.Should().BeNull();
+            m.Histogram.Should().BeNull();
+        });
+    }
+
+    #endregion
 }

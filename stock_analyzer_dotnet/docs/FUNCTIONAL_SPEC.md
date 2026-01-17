@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.4
+**Version:** 1.5
 **Last Updated:** 2026-01-16
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -231,6 +231,55 @@ The Stock Analyzer Dashboard allows users to:
 | Chart Background | White (#FFFFFF) | Gray-800 (#1F2937) |
 | Chart Gridlines | Gray-200 (#E5E7EB) | Gray-700 (#374151) |
 
+### 3.11 Technical Indicators (FR-011)
+
+| ID | Requirement |
+|----|-------------|
+| FR-011.1 | The system must support RSI (Relative Strength Index) indicator |
+| FR-011.2 | The system must support MACD (Moving Average Convergence Divergence) indicator |
+| FR-011.3 | The system must allow users to toggle RSI display independently |
+| FR-011.4 | The system must allow users to toggle MACD display independently |
+| FR-011.5 | The system must display RSI in a separate panel below the price chart |
+| FR-011.6 | The system must display MACD in a separate panel below the price chart |
+| FR-011.7 | The RSI panel must show overbought (70) and oversold (30) reference lines |
+| FR-011.8 | The MACD panel must show the MACD line, signal line, and histogram |
+| FR-011.9 | The chart must dynamically resize to accommodate indicator panels |
+| FR-011.10 | The system must use 14-period RSI calculation by default |
+| FR-011.11 | The system must use standard MACD parameters (12, 26, 9) by default |
+
+**User Story:** *As a technical trader, I want to see RSI and MACD indicators so that I can identify overbought/oversold conditions and momentum trends.*
+
+**RSI Configuration:**
+
+| Setting | Value |
+|---------|-------|
+| Default Period | 14 days |
+| Range | 0-100 |
+| Overbought Level | 70 |
+| Oversold Level | 30 |
+| Line Color | Purple (#8B5CF6) |
+
+**MACD Configuration:**
+
+| Setting | Value |
+|---------|-------|
+| Fast EMA Period | 12 days |
+| Slow EMA Period | 26 days |
+| Signal Period | 9 days |
+| MACD Line Color | Blue (#3B82F6) |
+| Signal Line Color | Orange (#F59E0B) |
+| Histogram (Positive) | Green (rgba(16, 185, 129, 0.7)) |
+| Histogram (Negative) | Red (rgba(239, 68, 68, 0.7)) |
+
+**Chart Layout (Dynamic):**
+
+| Configuration | Price Panel | RSI Panel | MACD Panel | Total Height |
+|---------------|-------------|-----------|------------|--------------|
+| No indicators | 100% | - | - | 400px |
+| RSI only | 68% | 28% | - | 550px |
+| MACD only | 68% | - | 28% | 550px |
+| Both indicators | 50% | 21% | 25% | 700px |
+
 ---
 
 ## 4. User Interface Specifications
@@ -287,6 +336,8 @@ The Stock Analyzer Dashboard allows users to:
 | SMA-20 | Checkbox | On/Off | On |
 | SMA-50 | Checkbox | On/Off | On |
 | SMA-200 | Checkbox | On/Off | Off |
+| RSI (14) | Checkbox | On/Off | Off |
+| MACD | Checkbox | On/Off | Off |
 | Threshold | Slider | 3% - 10% | 5% |
 | Show Markers | Checkbox | On/Off | On |
 | Popup Thumbnails | Radio | Cats, Dogs | Cats |
@@ -439,6 +490,8 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.5 | 2026-01-16 | Added Technical Indicators (FR-011): RSI and MACD with dynamic chart panels | Claude |
+| 1.4 | 2026-01-16 | Added Dark Mode (FR-010) with system preference detection | Claude |
 | 1.1 | 2026-01-16 | Added cats/dogs toggle (FR-005.11), image pre-caching (FR-005.12-15) | Claude |
 | 1.0 | 2026-01-16 | Initial .NET functional specification | Claude |
 
