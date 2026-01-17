@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.9
+**Version:** 1.10
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -525,16 +525,61 @@ Implements `BackgroundService` for continuous cache maintenance.
 ```
 wwwroot/
 ├── index.html          # Main page with Tailwind CSS layout
-├── docs.html           # Documentation viewer page
-├── docs/               # Markdown documentation files
-│   ├── CLAUDE.md
+├── docs.html           # Documentation viewer with Architecture visualization tab
+├── docs/               # Documentation files
+│   ├── CLAUDE.md       # Project guidelines (synced during build)
 │   ├── FUNCTIONAL_SPEC.md
-│   └── TECHNICAL_SPEC.md
+│   ├── TECHNICAL_SPEC.md
+│   └── diagrams/       # Mermaid diagram files (.mmd)
+│       ├── project-structure.mmd     # AUTO - solution dependencies
+│       ├── service-architecture.mmd  # MANUAL - backend services
+│       ├── data-flow.mmd             # MANUAL - sequence diagram
+│       ├── domain-models.mmd         # MANUAL - class diagram
+│       ├── image-pipeline.mmd        # MANUAL - ML processing flow
+│       ├── frontend-architecture.mmd # MANUAL - JS modules
+│       └── api-endpoints.mmd         # MANUAL - REST endpoints
 └── js/
     ├── api.js          # API client wrapper
     ├── app.js          # Main application logic
     └── charts.js       # Plotly chart configuration
 ```
+
+### 6.1.1 Documentation Page (docs.html)
+
+The documentation page provides four tabs:
+- **Project Guidelines** - CLAUDE.md with project rules and best practices
+- **Functional Spec** - User-facing feature documentation
+- **Technical Spec** - Developer documentation
+- **Architecture** - Interactive Mermaid.js diagrams loaded from .mmd files
+
+### 6.1.2 Architecture Diagrams (Hybrid Approach)
+
+Diagrams are stored as separate `.mmd` files in `wwwroot/docs/diagrams/` for maintainability:
+
+| File | Type | Description |
+|------|------|-------------|
+| `project-structure.mmd` | AUTO | Solution dependency graph (regenerated during build if mermaid-graph tool available) |
+| `service-architecture.mmd` | MANUAL | Backend services and external API connections |
+| `data-flow.mmd` | MANUAL | Sequence diagram for stock lookup flow |
+| `domain-models.mmd` | MANUAL | Class diagram of core models |
+| `image-pipeline.mmd` | MANUAL | ML-based image processing flow |
+| `frontend-architecture.mmd` | MANUAL | JavaScript modules and interactions |
+| `api-endpoints.mmd` | MANUAL | REST API endpoint reference |
+
+**Updating diagrams:**
+1. Edit the corresponding `.mmd` file in `wwwroot/docs/diagrams/`
+2. Mermaid syntax documentation: https://mermaid.js.org/
+3. Changes are live-reloaded (no build required for static files)
+
+**Auto-generation (optional):**
+To regenerate `project-structure.mmd` from the solution:
+```bash
+dotnet tool install -g mermaid-graph
+dotnet mermaid-graph --sln . --output src/StockAnalyzer.Api/wwwroot/docs/diagrams/project-structure.mmd --direction TD
+```
+
+**MIME type configuration:**
+`.mmd` files are served with `text/plain` content type via custom `FileExtensionContentTypeProvider` in Program.cs
 
 ### 6.2 JavaScript Modules
 
@@ -1084,6 +1129,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.10 | 2026-01-17 | Architecture visualization: Mermaid.js diagrams loaded from external .mmd files (hybrid auto/manual approach), MIME type config for .mmd files, MSBuild target for diagrams directory |
 | 1.9 | 2026-01-17 | Documentation page: docs.html with tabbed markdown viewer, marked.js integration, TOC sidebar |
 | 1.8 | 2026-01-17 | Stock comparison: normalizeToPercentChange helper, comparison mode in charts.js, benchmark buttons, indicator disable logic |
 | 1.7 | 2026-01-16 | Technical indicators: RSI and MACD calculation methods, RsiData/MacdData models, Plotly subplot support, dynamic chart resizing |

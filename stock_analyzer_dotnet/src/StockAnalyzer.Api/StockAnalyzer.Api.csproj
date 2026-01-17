@@ -39,4 +39,10 @@
           SkipUnchangedFiles="true" />
   </Target>
 
+  <!-- Ensure diagrams directory exists during build -->
+  <!-- To auto-regenerate project-structure.mmd, see TECHNICAL_SPEC.md for mermaid-graph command -->
+  <Target Name="EnsureDiagramsDirectory" BeforeTargets="Build" DependsOnTargets="CopyDocumentation">
+    <MakeDir Directories="$(ProjectDir)wwwroot\docs\diagrams" />
+  </Target>
+
 </Project>

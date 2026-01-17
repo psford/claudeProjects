@@ -317,4 +317,13 @@ ZAP Warnings (informational):
 | - | Tested docs.html and markdown files accessible (HTTP 200) | Success |
 | - | Added MSBuild target to auto-copy docs during build | Success |
 | - | Added guideline #43 (web documentation sync) | Success |
-| - | Verified build-time sync mechanism | Success
+| - | Verified build-time sync mechanism | Success |
+| - | Added guideline #44 (prefer FOSS tooling) | Success |
+| - | Added Architecture visualization tab to docs.html | Success |
+| - | Integrated Mermaid.js for interactive diagrams | Success |
+| - | Created 7 architecture diagrams (project structure, services, data flow, models, ML pipeline, frontend, API) | Success |
+| - | Refactored diagrams to external .mmd files (hybrid auto/manual approach) | Success |
+| - | Added MIME type config for .mmd files in Program.cs | Success |
+| - | Added MSBuild target for diagrams directory | Success |
+| - | Updated docs.html to dynamically load .mmd files | Success |
+| - | Updated TECHNICAL_SPEC.md v1.10 | Success |

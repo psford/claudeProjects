@@ -92,7 +92,14 @@ app.Use(async (context, next) =>
 });
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Configure static files with custom MIME types for .mmd (Mermaid) files
+var contentTypeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+contentTypeProvider.Mappings[".mmd"] = "text/plain";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = contentTypeProvider
+});
 
 // API Endpoints
 
