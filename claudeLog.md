@@ -327,3 +327,11 @@ ZAP Warnings (informational):
 | - | Added MSBuild target for diagrams directory | Success |
 | - | Updated docs.html to dynamically load .mmd files | Success |
 | - | Updated TECHNICAL_SPEC.md v1.10 | Success |
+| - | Added AUTO/MANUAL labels toggle to Architecture tab | Success |
+| - | Implemented fuzzy search with Fuse.js (threshold 0.4) | Success |
+| - | Added search results dropdown with highlighting | Success |
+| - | Implemented scroll spy for TOC highlighting | Success |
+| - | Fixed scroll spy flickering (removed IntersectionObserver, use scroll-only) | Success |
+| - | Committed docs page enhancements | Success (52c3aa2) |
+| - | Updated FUNCTIONAL_SPEC.md v1.7 (FR-013 Documentation Page) | Success |
+| - | Updated TECHNICAL_SPEC.md v1.11 (search, scroll spy) | Success |

@@ -89,6 +89,12 @@ My background is a longtime financial services business analyst, who has program
     - `claudeProjects/CLAUDE.md` → `wwwroot/docs/CLAUDE.md`
     - `stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md` → `wwwroot/docs/FUNCTIONAL_SPEC.md`
     - `stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md` → `wwwroot/docs/TECHNICAL_SPEC.md`
+44. Prefer FOSS tooling: When selecting libraries, tools, or dependencies, prefer well-supported Free and Open Source Software (FOSS) over proprietary alternatives. Prioritize:
+    - Active maintenance and community support
+    - Permissive licenses (MIT, Apache 2.0, BSD)
+    - Lightweight solutions over heavy frameworks
+    - Tools that work offline/locally when possible
+    - Established projects over bleeding-edge experiments
 
 # deployment
 

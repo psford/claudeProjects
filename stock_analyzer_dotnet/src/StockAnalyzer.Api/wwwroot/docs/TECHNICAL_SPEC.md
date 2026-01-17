@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.9
+**Version:** 1.11
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -525,16 +525,123 @@ Implements `BackgroundService` for continuous cache maintenance.
 ```
 wwwroot/
 ├── index.html          # Main page with Tailwind CSS layout
-├── docs.html           # Documentation viewer page
-├── docs/               # Markdown documentation files
-│   ├── CLAUDE.md
+├── docs.html           # Documentation viewer with Architecture visualization tab
+├── docs/               # Documentation files
+│   ├── CLAUDE.md       # Project guidelines (synced during build)
 │   ├── FUNCTIONAL_SPEC.md
-│   └── TECHNICAL_SPEC.md
+│   ├── TECHNICAL_SPEC.md
+│   └── diagrams/       # Mermaid diagram files (.mmd)
+│       ├── project-structure.mmd     # AUTO - solution dependencies
+│       ├── service-architecture.mmd  # MANUAL - backend services
+│       ├── data-flow.mmd             # MANUAL - sequence diagram
+│       ├── domain-models.mmd         # MANUAL - class diagram
+│       ├── image-pipeline.mmd        # MANUAL - ML processing flow
+│       ├── frontend-architecture.mmd # MANUAL - JS modules
+│       └── api-endpoints.mmd         # MANUAL - REST endpoints
 └── js/
     ├── api.js          # API client wrapper
     ├── app.js          # Main application logic
     └── charts.js       # Plotly chart configuration
 ```
+
+### 6.1.1 Documentation Page (docs.html)
+
+The documentation page provides four tabs:
+- **Project Guidelines** - CLAUDE.md with project rules and best practices
+- **Functional Spec** - User-facing feature documentation
+- **Technical Spec** - Developer documentation
+- **Architecture** - Interactive Mermaid.js diagrams loaded from .mmd files
+
+### 6.1.2 Architecture Diagrams (Hybrid Approach)
+
+Diagrams are stored as separate `.mmd` files in `wwwroot/docs/diagrams/` for maintainability:
+
+| File | Type | Description |
+|------|------|-------------|
+| `project-structure.mmd` | AUTO | Solution dependency graph (regenerated during build if mermaid-graph tool available) |
+| `service-architecture.mmd` | MANUAL | Backend services and external API connections |
+| `data-flow.mmd` | MANUAL | Sequence diagram for stock lookup flow |
+| `domain-models.mmd` | MANUAL | Class diagram of core models |
+| `image-pipeline.mmd` | MANUAL | ML-based image processing flow |
+| `frontend-architecture.mmd` | MANUAL | JavaScript modules and interactions |
+| `api-endpoints.mmd` | MANUAL | REST API endpoint reference |
+
+**Updating diagrams:**
+1. Edit the corresponding `.mmd` file in `wwwroot/docs/diagrams/`
+2. Mermaid syntax documentation: https://mermaid.js.org/
+3. Changes are live-reloaded (no build required for static files)
+
+**Auto-generation (optional):**
+To regenerate `project-structure.mmd` from the solution:
+```bash
+dotnet tool install -g mermaid-graph
+dotnet mermaid-graph --sln . --output src/StockAnalyzer.Api/wwwroot/docs/diagrams/project-structure.mmd --direction TD
+```
+
+**MIME type configuration:**
+`.mmd` files are served with `text/plain` content type via custom `FileExtensionContentTypeProvider` in Program.cs
+
+### 6.1.3 Documentation Search (Fuse.js)
+
+The documentation page includes fuzzy search across all documents using Fuse.js.
+
+**Configuration:**
+```javascript
+this.fuse = new Fuse(this.searchIndex, {
+    keys: [
+        { name: 'title', weight: 2 },    // Headings weighted higher
+        { name: 'content', weight: 1 }
+    ],
+    threshold: 0.4,          // 0 = exact, 1 = match anything
+    ignoreLocation: true,    // Match anywhere in string
+    includeMatches: true,    // For highlighting
+    minMatchCharLength: 2
+});
+```
+
+**Search Index Structure:**
+- Documents parsed into sections by markdown headings (h1, h2, h3)
+- Each section indexed with: `docKey`, `docTitle`, `title`, `content`, `headingId`
+- Architecture diagram titles and descriptions also indexed
+- Content truncated to 500 chars, markdown syntax stripped
+
+**UI Behavior:**
+- Debounced input (200ms) to reduce search frequency
+- Results dropdown with up to 10 matches
+- Highlighted matching terms in title and snippet
+- Click result to navigate to document and section
+- Press Escape or click outside to close
+
+### 6.1.4 Scroll Spy (TOC Highlighting)
+
+The TOC sidebar highlights the currently visible section as the user scrolls.
+
+**Implementation:**
+```javascript
+// Scroll-based approach with requestAnimationFrame throttling
+const updateActiveHeading = () => {
+    const threshold = scrollerRect.top + 100; // 100px from top
+
+    // Find last heading that scrolled past threshold
+    for (const heading of headings) {
+        if (heading.getBoundingClientRect().top <= threshold) {
+            activeId = heading.id;
+        } else {
+            break;
+        }
+    }
+
+    // Only update DOM if active changed (performance)
+    if (activeId !== currentActiveId) {
+        // Update TOC highlighting
+    }
+};
+```
+
+**CSS Styling:**
+- Active item: blue left border, light blue background, blue text, bold
+- Hover: subtle background highlight
+- Smooth transitions for all states
 
 ### 6.2 JavaScript Modules
 
@@ -1084,6 +1191,8 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
+| 1.10 | 2026-01-17 | Architecture visualization: Mermaid.js diagrams loaded from external .mmd files (hybrid auto/manual approach), MIME type config for .mmd files, MSBuild target for diagrams directory |
 | 1.9 | 2026-01-17 | Documentation page: docs.html with tabbed markdown viewer, marked.js integration, TOC sidebar |
 | 1.8 | 2026-01-17 | Stock comparison: normalizeToPercentChange helper, comparison mode in charts.js, benchmark buttons, indicator disable logic |
 | 1.7 | 2026-01-16 | Technical indicators: RSI and MACD calculation methods, RsiData/MacdData models, Plotly subplot support, dynamic chart resizing |

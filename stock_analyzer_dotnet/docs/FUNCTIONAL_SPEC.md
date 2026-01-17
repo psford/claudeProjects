@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.6
+**Version:** 1.7
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -325,6 +325,65 @@ The Stock Analyzer Dashboard allows users to:
 | Comparison stock line | Orange (dashed) | #F59E0B |
 | Baseline (0%) | Gray (dotted) | Theme-dependent |
 
+### 3.13 Documentation Page (FR-013)
+
+**Purpose:** Allow users to view project documentation with easy navigation and search.
+
+| ID | Requirement |
+|----|-------------|
+| FR-013.1 | The system must provide a documentation page accessible via footer link "View Documentation" |
+| FR-013.2 | The documentation page must display four tabs: Project Guidelines, Functional Spec, Technical Spec, Architecture |
+| FR-013.3 | The system must render Markdown files as formatted HTML using marked.js |
+| FR-013.4 | The system must display a Table of Contents (TOC) sidebar generated from document headings |
+| FR-013.5 | The system must highlight the currently visible section in the TOC as the user scrolls (scroll spy) |
+| FR-013.6 | The system must allow resizing the TOC sidebar via drag handle |
+| FR-013.7 | The system must persist the TOC width preference in localStorage |
+| FR-013.8 | The system must provide fuzzy search across all documentation using Fuse.js |
+| FR-013.9 | The search must display results with highlighted matching terms |
+| FR-013.10 | Clicking a search result must navigate to the relevant document and section |
+| FR-013.11 | The search must require minimum 2 characters and debounce input (200ms) |
+| FR-013.12 | The Architecture tab must display interactive Mermaid.js diagrams |
+| FR-013.13 | The system must provide a toggle to show/hide AUTO/MANUAL diagram labels |
+| FR-013.14 | The labels toggle must only appear when viewing the Architecture tab |
+| FR-013.15 | The labels must be hidden by default |
+| FR-013.16 | The documentation page must support dark mode matching the main application |
+
+**User Story:** *As a developer or user, I want to browse project documentation with easy navigation so that I can quickly find the information I need.*
+
+**Page Layout:**
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📄 Documentation              ← Back to Stock Analyzer          [🏷️][🌙]│
+├──────────────────────────────────────────────────────────────────────────┤
+│  [Guidelines] [Functional] [Technical] [Architecture]    [🔍 Search...]  │
+├────────────────┬─────────────────────────────────────────────────────────┤
+│                │                                                         │
+│  Table of      │   # Document Title                                      │
+│  Contents      │                                                         │
+│  ───────────   │   ## Section 1                                          │
+│  • Section 1   │   Content here...                                       │
+│  ▸ Section 2   │                                                         │
+│    ∘ Sub 2.1   │   ## Section 2                                          │
+│  • Section 3   │   Content here...                                       │
+│                │                                                         │
+│  (resizable)   │   (scrollable, with scroll spy)                         │
+│                │                                                         │
+└────────────────┴─────────────────────────────────────────────────────────┘
+```
+
+**Architecture Diagrams:**
+
+| Diagram | Type | Description |
+|---------|------|-------------|
+| Project Structure | AUTO | Solution dependency graph |
+| Service Architecture | MANUAL | Backend services and external APIs |
+| Data Flow | MANUAL | Sequence diagram for stock lookup |
+| Domain Models | MANUAL | Class diagram of core models |
+| Image Pipeline | MANUAL | ML-based image processing flow |
+| Frontend Architecture | MANUAL | JavaScript modules |
+| API Endpoints | MANUAL | REST API reference |
+
 ---
 
 ## 4. User Interface Specifications
@@ -538,6 +597,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.7 | 2026-01-17 | Added Documentation Page (FR-013): Tabbed docs viewer, Mermaid.js architecture diagrams, Fuse.js search, scroll spy TOC highlighting, resizable sidebar | Claude |
 | 1.6 | 2026-01-17 | Added Stock Comparison (FR-012): Compare to second stock/index with normalized % change | Claude |
 | 1.5 | 2026-01-16 | Added Technical Indicators (FR-011): RSI and MACD with dynamic chart panels | Claude |
 | 1.4 | 2026-01-16 | Added Dark Mode (FR-010) with system preference detection | Claude |
