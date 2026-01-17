@@ -84,6 +84,7 @@ My background is a longtime financial services business analyst, who has program
     - **FUNCTIONAL_SPEC.md — Update ONLY when user-facing behavior changes:** new features, UI changes, workflow changes, or requirement modifications. Internal refactoring, tests, and infrastructure don't require functional spec updates.
     - **Before running `git commit`:** Stage spec files alongside code files. If you're about to commit code without spec updates, STOP and update the specs first.
     - **Violation of this rule has happened repeatedly.** Do not commit code changes without the corresponding spec updates in the same commit.
+42. Test before commit: When making functional changes, ensure the server is running and have the user verify the changes work as expected before committing. Do not commit untested code.
 
 # deployment
 
