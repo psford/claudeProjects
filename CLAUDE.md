@@ -103,6 +103,11 @@ My background is a longtime financial services business analyst, who has program
     - The commit message should describe what was built AND documented together
     - **Root cause of past violations:** Treating "commit" as end-of-task instead of treating "specs updated + committed" as end-of-task
     - **IMPORTANT:** When the user says "commit" or "go ahead and commit", this is shorthand for "complete the full commit workflow" — not a literal single `git commit` command. The full workflow includes: spec updates, claudeLog updates, staging all related files, then committing.
+46. Archive source code, delete cruft: When retiring or reorganizing projects:
+    - **Archive (preserve):** Source code files, configuration files, documentation that may have future reference value
+    - **Delete (don't preserve):** Cache directories (`__pycache__`, `node_modules`, `bin/`, `obj/`), log files, temporary files, superseded documentation, old scan reports
+    - **Move to `archive/` folder:** Retired projects should be archived, not deleted, in case code needs to be referenced later
+    - **Consolidate infrastructure:** Shared helpers, configs, and tools should be moved to a common location, not duplicated
 
 # deployment
 

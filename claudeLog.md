@@ -338,3 +338,12 @@ ZAP Warnings (informational):
 | - | Committed spec updates | Success (9bb2134) |
 | - | Added guideline #45 (pre-commit spec check) | Success |
 | - | Updated guideline #45 - "commit" = full workflow, not literal command | Success |
+| - | Archived Python stock_analysis project to archive/stock_analysis_python/ | Success |
+| - | Moved helpers (slack_listener, slack_notify, security_scan, zap_scan) to root | Success |
+| - | Moved .env and Slack runtime files to root | Success |
+| - | Moved ROADMAP.md to stock_analyzer_dotnet | Success |
+| - | Deleted cruft (__pycache__, logs, old docs, security_reports) | Success |
+| - | Removed empty stock_analysis folder | Success |
+| - | Updated ROADMAP.md with all .NET completed features | Success |
+| - | Added guideline #46 (archive source, delete cruft) | Success |
+| - | Added codebase tidiness TODO to roadmap | Success |
