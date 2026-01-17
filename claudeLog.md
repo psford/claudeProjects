@@ -382,3 +382,6 @@ ZAP Warnings (informational):
 | - | Synced Slack, found messages #24 and #25 | Success |
 | - | Added "Use Chocolatey" principle to CLAUDE.md | Success |
 | - | Added CI/CD Jenkins task to whileYouWereAway.md | Success |
+| - | Added --poll mode to slack_listener.py (10s interval) | Success |
+| - | Poll mode uses 👀 for auto-acknowledge, ✅ for confirmed | Success |
+| - | Reduced logging verbosity (WARNING level) | Success |

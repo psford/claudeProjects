@@ -6,8 +6,9 @@ Listens for incoming Slack messages and saves them to slack_inbox.json.
 Run this as a background process to enable two-way Claude-user communication.
 
 Usage:
-    python helpers/slack_listener.py              # Run in foreground
-    python helpers/slack_listener.py --daemon     # Run in background (Windows)
+    python helpers/slack_listener.py --poll       # Poll every 10 seconds (recommended)
+    python helpers/slack_listener.py --poll -i 5  # Poll every 5 seconds
+    python helpers/slack_listener.py              # Socket Mode (requires app token)
     python helpers/slack_listener.py --check      # Check inbox without starting listener
     python helpers/slack_listener.py --sync       # Fetch missed messages from channel history
 
@@ -15,8 +16,8 @@ The listener saves messages to: slack_inbox.json
 
 Environment:
     SLACK_BOT_TOKEN   Bot OAuth token (xoxb-...)
-    SLACK_APP_TOKEN   App-level token for Socket Mode (xapp-...)
-    SLACK_CHANNEL_ID  Channel ID to sync history from (optional, for --sync)
+    SLACK_APP_TOKEN   App-level token for Socket Mode (xapp-...) - only needed without --poll
+    SLACK_CHANNEL_ID  Channel ID to monitor (default: C0A8LB49E1M)
 """
 
 import json
@@ -35,8 +36,8 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import logging
 
-# Enable debug logging for slack_bolt
-logging.basicConfig(level=logging.DEBUG)
+# Set logging level (DEBUG for troubleshooting, WARNING for normal use)
+logging.basicConfig(level=logging.WARNING)
 slack_logger = logging.getLogger("slack_bolt")
 
 # Paths
@@ -235,6 +236,113 @@ def check_inbox():
         print("No unread messages.\n")
 
 
+def poll_for_messages(interval: int = 10, channel_id: str = None):
+    """
+    Poll Slack for new messages at regular intervals.
+
+    This is simpler than Socket Mode - just HTTP requests every N seconds.
+    Only requires SLACK_BOT_TOKEN, not SLACK_APP_TOKEN.
+
+    Args:
+        interval: Seconds between polls (default: 10)
+        channel_id: Channel to monitor (default: from env or C0A8LB49E1M)
+    """
+    import time
+    from slack_sdk import WebClient
+
+    channel_id = channel_id or DEFAULT_CHANNEL_ID
+    bot_token = os.getenv("SLACK_BOT_TOKEN")
+
+    if not bot_token:
+        print("[ERROR] SLACK_BOT_TOKEN not found in .env")
+        return 1
+
+    client = WebClient(token=bot_token)
+
+    # Initial sync to get current state
+    log(f"Starting poll mode (every {interval}s) on channel {channel_id}")
+    log("Press Ctrl+C to stop")
+    log("-" * 40)
+
+    # Get initial known timestamps
+    known_ts = get_known_timestamps()
+    last_check = datetime.now()
+
+    # Track the latest timestamp we've seen
+    last_ts = get_last_sync_ts() or "0"
+
+    try:
+        while True:
+            try:
+                # Fetch recent messages since last check
+                result = client.conversations_history(
+                    channel=channel_id,
+                    limit=20,
+                    oldest=last_ts
+                )
+
+                messages = result.get("messages", [])
+                new_count = 0
+
+                # Process messages (oldest first)
+                for msg in reversed(messages):
+                    # Skip bot messages
+                    if msg.get("bot_id") or msg.get("subtype") == "bot_message":
+                        continue
+
+                    ts = msg.get("ts", "")
+
+                    # Skip if we already have this message
+                    if ts in known_ts:
+                        continue
+
+                    user_id = msg.get("user", "unknown")
+                    text = msg.get("text", "")
+
+                    # Add to inbox
+                    add_message(
+                        user=user_id,
+                        channel=f"#{channel_id}",
+                        text=text,
+                        timestamp=ts
+                    )
+                    known_ts.add(ts)
+                    new_count += 1
+
+                    # Add reaction to acknowledge
+                    try:
+                        client.reactions_add(channel=channel_id, timestamp=ts, name="eyes")
+                    except Exception:
+                        pass  # May fail if already reacted
+
+                # Update last timestamp
+                if messages:
+                    latest_ts = max(msg.get("ts", "0") for msg in messages)
+                    if latest_ts > last_ts:
+                        last_ts = latest_ts
+                        set_last_sync_ts(last_ts)
+
+                # Status update
+                now = datetime.now()
+                if new_count > 0:
+                    log(f"[{now.strftime('%H:%M:%S')}] Found {new_count} new message(s)")
+                else:
+                    # Print a dot every minute to show we're alive
+                    if (now - last_check).seconds >= 60:
+                        print(f"[{now.strftime('%H:%M:%S')}] Listening...", flush=True)
+                        last_check = now
+
+            except Exception as e:
+                log(f"[ERROR] Poll failed: {e}")
+
+            # Wait for next poll
+            time.sleep(interval)
+
+    except KeyboardInterrupt:
+        log("\nPoll mode stopped by user.")
+        return 0
+
+
 def create_app() -> App:
     """Create and configure the Slack Bolt app."""
     bot_token = os.getenv("SLACK_BOT_TOKEN")
@@ -362,6 +470,17 @@ def main():
         action="store_true",
         help="Skip history sync on startup"
     )
+    parser.add_argument(
+        "--poll",
+        action="store_true",
+        help="Use polling mode (simpler, only needs bot token)"
+    )
+    parser.add_argument(
+        "--interval", "-i",
+        type=int,
+        default=10,
+        help="Polling interval in seconds (default: 10)"
+    )
 
     args = parser.parse_args()
 
@@ -386,7 +505,11 @@ def main():
         check_inbox()
         return 0
 
-    # Validate tokens
+    # Poll mode - simpler, only needs bot token
+    if args.poll:
+        return poll_for_messages(interval=args.interval)
+
+    # Socket Mode - needs both tokens
     app_token = os.getenv("SLACK_APP_TOKEN")
     bot_token = os.getenv("SLACK_BOT_TOKEN")
 
