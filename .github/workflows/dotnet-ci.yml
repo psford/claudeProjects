@@ -1,0 +1,67 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'stock_analyzer_dotnet/**'
+      - '.github/workflows/dotnet-ci.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'stock_analyzer_dotnet/**'
+      - '.github/workflows/dotnet-ci.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION_PATH: 'stock_analyzer_dotnet/StockAnalyzer.sln'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test ${{ env.SOLUTION_PATH }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()  # Upload even if tests fail
+      with:
+        name: test-results
+        path: '**/TestResults/*.trx'
+        retention-days: 30
+
+  # Optional: Build for Windows to ensure cross-platform compatibility
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
