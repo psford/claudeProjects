@@ -173,7 +173,8 @@ Commit message should describe what was built AND documented.
 
 **Slack integration:**
 - Proactively restart the Slack listener if it appears disconnected
-- When completing a Slack task, add ✅ reaction to confirm
+- Add ✅ reaction to EVERY Slack message when acknowledged (not just when completed)
+- Mark message as `read: true` in `slack_inbox.json` after reacting
 - Keep `slack_inbox.json` and `slack_last_sync.txt` at project root
 
 ---
