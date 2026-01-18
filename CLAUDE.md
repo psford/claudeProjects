@@ -251,6 +251,12 @@ The documentation page serves copies of specs from `wwwroot/docs/`. These sync a
 | `stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
 | `stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
 
+**Feature conventions:**
+
+| Pattern | Components |
+|---------|------------|
+| **±5% Significant Move Markers** | When adding this feature to any chart, include the complete package: (1) Triangle markers on chart for days with ≥5% change, (2) Toggle checkbox to show/hide markers, (3) Wikipedia-style hover cards on marker hover, (4) Cat/dog image toggle, (5) News content in hover card (source varies by context - stock-specific news for individual stocks, market news for portfolios). |
+
 ---
 
 ## Deprecated / Archived

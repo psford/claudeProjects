@@ -420,3 +420,60 @@ ZAP Warnings (informational):
 | - | Added OWASP Dependency Check to dotnet-ci.yml workflow | Success |
 | - | Created dependabot.yml for automated dependency updates | Success |
 | - | Build verified with new analyzers (CA2000 warnings found - reliability) | Success |
+
+---
+
+## 01/17/2026
+
+### Watchlist Feature Implementation
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created Watchlist.cs model with UserId for multi-user | Success |
+| - | Created IWatchlistRepository interface | Success |
+| - | Created JsonWatchlistRepository with thread-safe persistence | Success |
+| - | Created WatchlistService with business logic | Success |
+| - | Added 18 unit tests for WatchlistService | Success |
+| - | Added 8 API endpoints to Program.cs | Success |
+| - | Added watchlist config to appsettings.json | Success |
+| - | Created watchlist.js frontend UI | Success |
+| - | Updated index.html with sidebar and modal | Success |
+| - | Updated api.js with 8 watchlist methods | Success |
+| - | Ran full test suite (95 tests, 3 skipped) | Success |
+| - | Tested all API endpoints via curl | Success |
+| - | Updated TECHNICAL_SPEC.md to v1.17 | Success |
+| - | Updated ROADMAP.md (portfolio tracker complete) | Success |
+| - | Committed and pushed to GitHub | Success (a30df6e)
+| - | Updated FUNCTIONAL_SPEC.md v1.9 with watchlist requirements (FR-014) | Success (2452eef)
+| - | User tested watchlist feature (create, add ticker, click-to-analyze, rename, delete) | Success - verified
+
+### Combined Watchlist View Implementation (Phase 5 complete)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Added TickerHolding model and extended Watchlist with Holdings/WeightingMode | Success |
+| - | Added CombinedPortfolioResult and PortfolioDataPoint DTOs | Success |
+| - | Implemented UpdateHoldingsAsync in WatchlistService | Success |
+| - | Implemented GetCombinedPortfolioAsync with portfolio aggregation | Success |
+| - | Added GetMarketNewsAsync to NewsService (Finnhub /news endpoint) | Success |
+| - | Added 3 API endpoints (PUT holdings, GET combined, GET market news) | Success |
+| - | Added new methods to api.js (updateWatchlistHoldings, getCombinedPortfolio, getMarketNews) | Success |
+| - | Added holdings modal HTML (weighting mode radio, ticker inputs) | Success |
+| - | Added combined view modal HTML (chart, weights, market news) | Success |
+| - | Implemented combined view toggle and holdings editor in watchlist.js | Success |
+| - | Added renderPortfolioChart for portfolio performance charting | Success |
+| - | Built solution (0 warnings, 0 errors) | Success |
+| - | Started API server for testing | Success (localhost:5000)
+| - | Fixed holdings modal return flow (z-index layering vs view close/reopen) | Success |
+| - | Updated FUNCTIONAL_SPEC.md v2.0 with FR-015 (Combined Watchlist View) | Success |
+| - | Added PortfolioSignificantMove model to Watchlist.cs | Success |
+| - | Added CalculateSignificantMoves method to WatchlistService | Success |
+| - | Added ±5% significant move markers to portfolio chart | Success |
+| - | Added marker toggle checkbox to combined view | Success |
+| - | User tested ±5% markers | Success - "Indicators look good" |
+| - | Implemented Wikipedia-style hover cards on combined view markers | Success |
+| - | Hover cards show market news instead of stock-specific news | Success |
+| - | Added cat/dog toggle to combined view hover cards | Success |
+| - | Added feature convention note to CLAUDE.md (±5% hover card package) | Success |
+| - | User tested cat/dog toggle | Success - "looking good" |
+| - | Updated TECHNICAL_SPEC.md v1.18 (Combined Watchlist View documentation) | Success |
