@@ -31,6 +31,8 @@ These always apply, regardless of task.
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
+| **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
+| **Commit to GitHub** | Work isn't finished until it's committed and pushed to GitHub. Always end sessions with everything in the repo. |
 
 ---
 
@@ -248,6 +250,12 @@ The documentation page serves copies of specs from `wwwroot/docs/`. These sync a
 | `claudeProjects/CLAUDE.md` | `wwwroot/docs/CLAUDE.md` |
 | `stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
 | `stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
+
+**Feature conventions:**
+
+| Pattern | Components |
+|---------|------------|
+| **±5% Significant Move Markers** | When adding this feature to any chart, include the complete package: (1) Triangle markers on chart for days with ≥5% change, (2) Toggle checkbox to show/hide markers, (3) Wikipedia-style hover cards on marker hover, (4) Cat/dog image toggle, (5) News content in hover card (source varies by context - stock-specific news for individual stocks, market news for portfolios). |
 
 ---
 

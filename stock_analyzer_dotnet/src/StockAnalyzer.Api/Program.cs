@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using StockAnalyzer.Core.Models;
 using StockAnalyzer.Core.Services;
 
 // Configure Serilog before building the app
@@ -54,6 +55,16 @@ builder.Services.AddSingleton(sp =>
     var newsService = sp.GetRequiredService<NewsService>();
     return new AnalysisService(newsService);
 });
+
+// Register watchlist services
+builder.Services.AddSingleton<IWatchlistRepository>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var storagePath = config["Watchlist:StoragePath"] ?? "data/watchlists.json";
+    var logger = sp.GetRequiredService<ILogger<JsonWatchlistRepository>>();
+    return new JsonWatchlistRepository(storagePath, logger);
+});
+builder.Services.AddSingleton<WatchlistService>();
 
 // Register image processing services
 builder.Services.AddSingleton(sp =>
@@ -376,6 +387,179 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 {
     Predicate = check => check.Tags.Contains("external")
 });
+
+// Watchlist API endpoints
+
+// GET /api/watchlists - List all watchlists
+app.MapGet("/api/watchlists", async (WatchlistService watchlistService) =>
+{
+    var watchlists = await watchlistService.GetAllAsync();
+    return Results.Ok(watchlists);
+})
+.WithName("GetWatchlists")
+.WithOpenApi()
+.Produces<List<StockAnalyzer.Core.Models.Watchlist>>(StatusCodes.Status200OK);
+
+// POST /api/watchlists - Create a new watchlist
+app.MapPost("/api/watchlists", async (StockAnalyzer.Core.Models.CreateWatchlistRequest request, WatchlistService watchlistService) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Name))
+        return Results.BadRequest(new { error = "Watchlist name is required" });
+
+    var watchlist = await watchlistService.CreateAsync(request.Name);
+    return Results.Created($"/api/watchlists/{watchlist.Id}", watchlist);
+})
+.WithName("CreateWatchlist")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status400BadRequest);
+
+// GET /api/watchlists/{id} - Get a watchlist by ID
+app.MapGet("/api/watchlists/{id}", async (string id, WatchlistService watchlistService) =>
+{
+    var watchlist = await watchlistService.GetByIdAsync(id);
+    return watchlist != null
+        ? Results.Ok(watchlist)
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("GetWatchlist")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
+// PUT /api/watchlists/{id} - Rename a watchlist
+app.MapPut("/api/watchlists/{id}", async (string id, StockAnalyzer.Core.Models.UpdateWatchlistRequest request, WatchlistService watchlistService) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Name))
+        return Results.BadRequest(new { error = "Watchlist name is required" });
+
+    var watchlist = await watchlistService.RenameAsync(id, request.Name);
+    return watchlist != null
+        ? Results.Ok(watchlist)
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("UpdateWatchlist")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound);
+
+// DELETE /api/watchlists/{id} - Delete a watchlist
+app.MapDelete("/api/watchlists/{id}", async (string id, WatchlistService watchlistService) =>
+{
+    var deleted = await watchlistService.DeleteAsync(id);
+    return deleted
+        ? Results.NoContent()
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("DeleteWatchlist")
+.WithOpenApi()
+.Produces(StatusCodes.Status204NoContent)
+.Produces(StatusCodes.Status404NotFound);
+
+// POST /api/watchlists/{id}/tickers - Add a ticker to a watchlist
+app.MapPost("/api/watchlists/{id}/tickers", async (string id, StockAnalyzer.Core.Models.AddTickerRequest request, WatchlistService watchlistService) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Ticker))
+        return Results.BadRequest(new { error = "Ticker is required" });
+
+    var watchlist = await watchlistService.AddTickerAsync(id, request.Ticker);
+    return watchlist != null
+        ? Results.Ok(watchlist)
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("AddTickerToWatchlist")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound);
+
+// DELETE /api/watchlists/{id}/tickers/{ticker} - Remove a ticker from a watchlist
+app.MapDelete("/api/watchlists/{id}/tickers/{ticker}", async (string id, string ticker, WatchlistService watchlistService) =>
+{
+    var watchlist = await watchlistService.RemoveTickerAsync(id, ticker);
+    return watchlist != null
+        ? Results.Ok(watchlist)
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("RemoveTickerFromWatchlist")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/watchlists/{id}/quotes - Get current quotes for all tickers in a watchlist
+app.MapGet("/api/watchlists/{id}/quotes", async (string id, WatchlistService watchlistService) =>
+{
+    var quotes = await watchlistService.GetQuotesAsync(id);
+    return quotes != null
+        ? Results.Ok(quotes)
+        : Results.NotFound(new { error = "Watchlist not found", id });
+})
+.WithName("GetWatchlistQuotes")
+.WithOpenApi()
+.Produces<WatchlistQuotes>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
+// PUT /api/watchlists/{id}/holdings - Update holdings for a watchlist
+app.MapPut("/api/watchlists/{id}/holdings", async (
+    string id,
+    UpdateHoldingsRequest request,
+    WatchlistService watchlistService) =>
+{
+    var validModes = new[] { "equal", "shares", "dollars" };
+    if (!validModes.Contains(request.WeightingMode.ToLower()))
+    {
+        return Results.BadRequest(new { error = "Invalid weighting mode. Must be: equal, shares, or dollars" });
+    }
+
+    try
+    {
+        var watchlist = await watchlistService.UpdateHoldingsAsync(id, request);
+        return watchlist != null
+            ? Results.Ok(watchlist)
+            : Results.NotFound(new { error = "Watchlist not found", id });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateWatchlistHoldings")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/watchlists/{id}/combined - Get combined portfolio performance
+app.MapGet("/api/watchlists/{id}/combined", async (
+    string id,
+    string? period,
+    string? benchmark,
+    WatchlistService watchlistService) =>
+{
+    var result = await watchlistService.GetCombinedPortfolioAsync(
+        id,
+        period ?? "1y",
+        benchmark);
+
+    return result != null
+        ? Results.Ok(result)
+        : Results.NotFound(new { error = "Watchlist not found or no data available", id });
+})
+.WithName("GetCombinedPortfolio")
+.WithOpenApi()
+.Produces<CombinedPortfolioResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/news/market - Get general market news
+app.MapGet("/api/news/market", async (string? category, NewsService newsService) =>
+{
+    var result = await newsService.GetMarketNewsAsync(category ?? "general");
+    return Results.Ok(result);
+})
+.WithName("GetMarketNews")
+.WithOpenApi()
+.Produces<NewsResult>(StatusCodes.Status200OK);
 
 // Add request logging
 app.UseSerilogRequestLogging(options =>

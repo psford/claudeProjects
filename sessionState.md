@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/16/2026 (11:45 PM)
+# Session State - Last Updated 01/17/2026 (03:25 AM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -16,14 +16,15 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ## Environment Status
 
 ### Git
-- **Status:** Configured and working locally
+- **Status:** Configured and working
 - **User:** psford <patrick@psford.com>
 - **Repository:** C:\Users\patri\Documents\claudeProjects (master branch)
 
 ### GitHub
-- **Status:** NOT CONNECTED
-- **Issue:** Windows credential manager had memory errors; token auth also failed
-- **Pending:** CI/CD Jenkins workflow (depends on GitHub fix)
+- **Status:** CONNECTED (SSH auth)
+- **Auth:** ED25519 SSH key (~/.ssh/github_ed25519)
+- **Branch protection:** Enabled (PR reviews, status checks)
+- **CI/CD:** GitHub Actions + Jenkins
 
 ### Python
 - **Version:** 3.10.11
@@ -32,15 +33,15 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ### .NET
 - **Version:** .NET 8
 - **Project:** stock_analyzer_dotnet (ASP.NET Core minimal API + Tailwind CSS frontend)
+- **Analyzers:** SecurityCodeScan, NetAnalyzers, Roslynator
 
 ### Slack Integration
-- **Status:** OPERATIONAL
+- **Status:** OPERATIONAL (async bot)
 - **Workspace:** psforddigitaldesign.slack.com
 - **Channel:** #claude-notifications (C0A8LB49E1M)
-- **Poll for messages:** `python helpers/slack_listener.py --poll`
-- **Check inbox:** `python helpers/slack_listener.py --check`
-- **Send message:** `python helpers/slack_notify.py "message"`
-- **Add reaction:** `python helpers/slack_notify.py --react -c CHANNEL -ts TIMESTAMP`
+- **Start bot:** `python helpers/slack_bot.py start`
+- **Check status:** `python helpers/slack_bot.py status`
+- **Stop bot:** `python helpers/slack_bot.py stop`
 
 ---
 
@@ -48,57 +49,48 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ```
 claudeProjects/
-├── CLAUDE.md                    # Guidelines (9 themed sections)
+├── CLAUDE.md                    # Guidelines
 ├── sessionState.md              # This file
 ├── claudeLog.md                 # Action log
 ├── whileYouWereAway.md          # Task queue
 ├── .env                         # API keys (gitignored)
-├── slack_inbox.json             # Slack messages (gitignored)
+├── slack_inbox.json             # Slack messages
+│
+├── .github/
+│   ├── workflows/
+│   │   ├── dotnet-ci.yml        # Build + test + security scan
+│   │   └── codeql.yml           # Weekly SAST scans
+│   ├── dependabot.yml           # Auto dependency updates
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── CODEOWNERS
 │
 ├── helpers/                     # Reusable Python scripts
-│   ├── slack_listener.py        # Receive messages (--poll mode)
+│   ├── slack_bot.py             # Async bot manager (start/stop/status)
+│   ├── slack_listener.py        # Receive messages
+│   ├── slack_acknowledger.py    # Auto-acknowledge read messages
 │   ├── slack_notify.py          # Send messages & reactions
 │   ├── ui_test.py               # Playwright UI testing
 │   ├── speech_to_text.py        # Whisper transcription
-│   ├── Invoke-SpeechToText.ps1  # PowerShell wrapper
-│   ├── security_scan.py         # SAST (Bandit)
 │   └── checkpoint.py            # Session state saves
 │
 ├── stock_analyzer_dotnet/       # Active .NET project
+│   ├── .editorconfig            # Analyzer rules (CA5xxx as errors)
 │   ├── docs/
 │   │   ├── FUNCTIONAL_SPEC.md   # v1.8
-│   │   └── TECHNICAL_SPEC.md    # v1.12
+│   │   ├── TECHNICAL_SPEC.md    # v1.16
+│   │   ├── CI_CD_SECURITY_PLAN.md
+│   │   └── DOTNET_SECURITY_EVALUATION.md
 │   ├── ROADMAP.md
 │   └── src/
 │       ├── StockAnalyzer.Api/   # Web API + frontend
+│       │   └── wwwroot/
+│       │       ├── index.html
+│       │       ├── status.html  # Health dashboard
+│       │       └── docs.html    # Documentation viewer
 │       └── StockAnalyzer.Core/  # Business logic
 │
 └── archive/                     # Archived projects
-    ├── stock_analysis_python/   # Original Python version
-    └── CLAUDE_v1_original.md    # Pre-reorganization guidelines
 ```
-
----
-
-## CLAUDE.md Structure (Reorganized)
-
-9 themed sections replacing 46 numbered rules:
-1. **Principles** - Core values (challenge me, admit limitations, cite sources, etc.)
-2. **Session Protocol** - hello!/night!, checkpoints, between-tasks behavior
-3. **Development Workflow** - Planning, coding standards, testing (Playwright), pre-commit
-4. **Communication** - Research before asking, Slack integration
-5. **File Management** - Version control, backups, archiving
-6. **Security** - SAST/DAST scanning, pre-commit hooks
-7. **Project Files Reference** - Quick reference table
-8. **Stock Analyzer Specific** - Doc sync, build targets
-9. **Deprecated** - Archived items
-
-**Key additions this session:**
-- "Admit limitations" principle - If I can't do something, say so immediately
-- "Use Chocolatey" principle - Preferred Windows package manager
-- Playwright for UI testing (smoke, verify, screenshot)
-- React to ALL Slack messages when acknowledged (not just completed)
-- Between-tasks: Check Slack when idle
 
 ---
 
@@ -113,57 +105,53 @@ claudeProjects/
 - Cat/dog popup thumbnails
 - Dark mode toggle
 - Documentation page with search, TOC, architecture diagrams
+- **NEW:** Health monitoring dashboard (/status.html)
 
 ---
 
-## New Tools This Session
+## Security Tools
 
-| Tool | Purpose | Usage |
-|------|---------|-------|
-| `ui_test.py` | Playwright UI testing | `python helpers/ui_test.py smoke http://localhost:5000` |
-| `speech_to_text.py` | Whisper transcription | `python helpers/speech_to_text.py --duration 10` |
-| Slack polling | Real-time message monitoring | `python helpers/slack_listener.py --poll` |
-| Slack reactions | Acknowledge messages | `--react -c CHANNEL -ts TIMESTAMP` |
-
----
-
-## Pending Tasks (whileYouWereAway.md)
-
-- #8: Review roadmap and propose user stories
-- #10: .NET rewrite (DONE - all features implemented)
-- #12: CI/CD Jenkins workflow (blocked on GitHub)
+| Tool | Type | Integration |
+|------|------|-------------|
+| SecurityCodeScan | SAST | Build-time |
+| NetAnalyzers | SAST | Build-time |
+| Roslynator | Code quality | Build-time |
+| CodeQL | SAST | GitHub Actions (weekly) |
+| OWASP Dep Check | SCA | GitHub Actions |
+| Dependabot | SCA | GitHub (auto-PRs) |
+| Bandit | Python SAST | Pre-commit |
+| detect-secrets | Secrets | Pre-commit |
 
 ---
 
-## Today's Session Summary (01/16/2026)
+## Today's Session Summary (01/17/2026)
 
-**Bollinger Bands:** Added to charts (model, service, UI, rendering)
+**Health Monitoring Dashboard:**
+- Created `/status.html` with real-time health status
+- Shows API, Finnhub, Yahoo Finance status
+- Endpoint response times, image cache levels
+- Auto-refresh every 30 seconds, dark mode support
 
-**Documentation page:** Already complete from previous session
+**Async Slack Bot:**
+- Created `slack_acknowledger.py` - watches for read messages, sends checkmark
+- Created `slack_bot.py` - manages listener + acknowledger as background services
+- Listener and acknowledger run independently
 
-**CLAUDE.md reorganization:** 46 flat rules → 9 themed sections
+**.NET Security Evaluation:**
+- Added Microsoft.CodeAnalysis.NetAnalyzers to projects
+- Added Roslynator.Analyzers to projects
+- Created `.editorconfig` with CA5xxx security rules as errors
+- Added OWASP Dependency Check to CI/CD workflow
+- Created `dependabot.yml` for automated updates
+- Created `DOTNET_SECURITY_EVALUATION.md` documentation
 
-**New guidelines added:**
-- "Admit limitations" - Don't pretend to have capabilities I lack
-- "Use Chocolatey" - Preferred Windows package manager
-- "Between tasks" - Check Slack when idle
-- Updated Slack reaction rule - React to ALL messages when acknowledged
-
-**New tooling:**
-- Playwright for UI testing (screenshot, smoke, verify, check)
-- OpenAI Whisper for speech-to-text (local, free)
-- Slack polling mode (--poll, 10s interval)
-- Slack reaction support (--react)
+**New Guidelines Added:**
+- "Update specs proactively" - Don't wait for reminders
+- "Commit to GitHub" - Work isn't done until it's pushed
 
 **Commits:**
-- c0d979f - Add Bollinger Bands technical indicator
-- 71ce069 - Reorganize CLAUDE.md: 46 rules → 9 themed sections
-- 8438744 - Add speech-to-text using OpenAI Whisper
-- edac024 - Add Playwright UI testing and Slack reaction support
-- 60a44b2 - Add capability honesty principle
-- 63c41e2 - Add Chocolatey preference
-- 887000f - Update Slack reaction guideline
-- 8b4b078 - Add polling mode to Slack listener
+- 1a46963 - Add health dashboard, async Slack bot, and .NET security tools
+- 942aaed - Add 'update specs proactively' guideline
 
 ---
 
@@ -172,8 +160,8 @@ claudeProjects/
 **Say "hello!"** to restore context.
 
 Then:
-1. Check Slack: `python helpers/slack_listener.py --check`
-2. Start poll listener (optional): `python helpers/slack_listener.py --poll`
+1. Start Slack bot: `python helpers/slack_bot.py start`
+2. Check status: `python helpers/slack_bot.py status`
 3. Review tasks: Read `whileYouWereAway.md`
 
 To run .NET app:
@@ -181,6 +169,7 @@ To run .NET app:
 cd stock_analyzer_dotnet
 dotnet run --project src/StockAnalyzer.Api
 # Visit http://localhost:5000
+# Status dashboard: http://localhost:5000/status.html
 ```
 
 **Say "night!"** at end of session to save state.

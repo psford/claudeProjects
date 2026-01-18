@@ -99,5 +99,171 @@ const API = {
     async healthCheck() {
         const response = await fetch(`${this.baseUrl}/health`);
         return response.json();
+    },
+
+    // ============================================
+    // Watchlist API Methods
+    // ============================================
+
+    /**
+     * Get all watchlists
+     */
+    async getWatchlists() {
+        const response = await fetch(`${this.baseUrl}/watchlists`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch watchlists');
+        }
+        return response.json();
+    },
+
+    /**
+     * Create a new watchlist
+     * @param {string} name - Watchlist name
+     */
+    async createWatchlist(name) {
+        const response = await fetch(`${this.baseUrl}/watchlists`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to create watchlist');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get a watchlist by ID
+     * @param {string} id - Watchlist ID
+     */
+    async getWatchlist(id) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}`);
+        if (!response.ok) {
+            throw new Error('Watchlist not found');
+        }
+        return response.json();
+    },
+
+    /**
+     * Rename a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} name - New name
+     */
+    async renameWatchlist(id, name) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to rename watchlist');
+        }
+        return response.json();
+    },
+
+    /**
+     * Delete a watchlist
+     * @param {string} id - Watchlist ID
+     */
+    async deleteWatchlist(id) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete watchlist');
+        }
+        return true;
+    },
+
+    /**
+     * Add a ticker to a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} ticker - Ticker symbol
+     */
+    async addTickerToWatchlist(id, ticker) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}/tickers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to add ticker to watchlist');
+        }
+        return response.json();
+    },
+
+    /**
+     * Remove a ticker from a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} ticker - Ticker symbol
+     */
+    async removeTickerFromWatchlist(id, ticker) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}/tickers/${ticker}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            throw new Error('Failed to remove ticker from watchlist');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get quotes for all tickers in a watchlist
+     * @param {string} id - Watchlist ID
+     */
+    async getWatchlistQuotes(id) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}/quotes`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch watchlist quotes');
+        }
+        return response.json();
+    },
+
+    /**
+     * Update holdings for a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} weightingMode - "equal", "shares", or "dollars"
+     * @param {Array} holdings - Array of {ticker, shares, dollarValue}
+     */
+    async updateWatchlistHoldings(id, weightingMode, holdings) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}/holdings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weightingMode, holdings })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update holdings');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get combined portfolio performance for a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} period - Time period (1mo, 3mo, 6mo, 1y, 2y)
+     * @param {string} benchmark - Optional benchmark ticker (SPY, QQQ)
+     */
+    async getCombinedPortfolio(id, period = '1y', benchmark = null) {
+        let url = `${this.baseUrl}/watchlists/${id}/combined?period=${period}`;
+        if (benchmark) {
+            url += `&benchmark=${benchmark}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Failed to fetch combined portfolio');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get general market news
+     * @param {string} category - News category: general, forex, crypto, merger
+     */
+    async getMarketNews(category = 'general') {
+        const response = await fetch(`${this.baseUrl}/news/market?category=${category}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch market news');
+        }
+        return response.json();
     }
 };

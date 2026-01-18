@@ -605,6 +605,11 @@ const App = {
             this.renderNews(news);
 
             this.showResults();
+
+            // Show "Add to Watchlist" button
+            if (typeof Watchlist !== 'undefined') {
+                Watchlist.showAddToWatchlistButton();
+            }
         } catch (error) {
             this.showError(error.message);
         }
@@ -1117,6 +1122,9 @@ const App = {
         return text;
     }
 };
+
+// Expose App globally for other modules (like Watchlist)
+window.App = App;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => App.init());
