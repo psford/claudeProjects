@@ -7,6 +7,30 @@ const Watchlist = {
     expandedWatchlists: new Set(),
     editingWatchlistId: null,
 
+    // Combined view state
+    combinedView: {
+        isOpen: false,
+        watchlistId: null,
+        period: '1y',
+        benchmark: null,
+        data: null,
+        showMarkers: true,
+        currentAnimal: 'cats', // 'cats' or 'dogs'
+        marketNews: [],
+        hoverTimeout: null,
+        hideTimeout: null,
+        isHoverCardHovered: false
+    },
+
+    // Holdings editor state
+    holdingsEditor: {
+        watchlistId: null,
+        quotes: null,
+        returnToCombinedView: false,
+        localTickers: [], // Local copy of tickers for editing
+        searchTimeout: null
+    },
+
     /**
      * Initialize watchlist functionality
      */
@@ -53,6 +77,67 @@ const Watchlist = {
             if (dropdown && !dropdown.contains(e.target) && !btn?.contains(e.target)) {
                 this.hideWatchlistDropdown();
             }
+        });
+
+        // Holdings modal events
+        document.getElementById('holdings-modal-close')?.addEventListener('click', () => this.closeHoldingsModal());
+        document.getElementById('holdings-modal-cancel')?.addEventListener('click', () => this.closeHoldingsModal());
+        document.getElementById('holdings-modal-overlay')?.addEventListener('click', () => this.closeHoldingsModal());
+        document.getElementById('holdings-modal-save')?.addEventListener('click', () => this.saveHoldings());
+
+        // Weighting mode change
+        document.querySelectorAll('input[name="weighting-mode"]').forEach(radio => {
+            radio.addEventListener('change', () => this.updateHoldingsInputs());
+        });
+
+        // Holdings ticker search
+        const holdingsSearch = document.getElementById('holdings-ticker-search');
+        if (holdingsSearch) {
+            holdingsSearch.addEventListener('input', (e) => this.handleHoldingsSearch(e.target.value));
+            holdingsSearch.addEventListener('blur', () => {
+                // Delay hiding to allow click on results
+                setTimeout(() => this.hideHoldingsSearchResults(), 200);
+            });
+        }
+
+        // Combined view modal events
+        document.getElementById('combined-view-back')?.addEventListener('click', () => this.closeCombinedView());
+        document.getElementById('combined-edit-holdings')?.addEventListener('click', () => {
+            const watchlistId = this.combinedView.watchlistId;
+            this.holdingsEditor.returnToCombinedView = true;
+            // Don't close combined view - holdings modal overlays on top (z-50 vs z-40)
+            this.openHoldingsModal(watchlistId);
+        });
+
+        // Period buttons
+        document.querySelectorAll('#combined-period-buttons button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const period = btn.dataset.period;
+                if (period) this.changeCombinedPeriod(period);
+            });
+        });
+
+        // Benchmark buttons
+        document.querySelectorAll('#combined-benchmark-buttons button[data-benchmark]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const benchmark = btn.dataset.benchmark;
+                if (benchmark) this.toggleBenchmark(benchmark);
+            });
+        });
+
+        document.getElementById('combined-clear-benchmark')?.addEventListener('click', () => this.clearBenchmark());
+
+        // Significant moves toggle
+        document.getElementById('combined-show-markers')?.addEventListener('change', (e) => {
+            this.combinedView.showMarkers = e.target.checked;
+            if (this.combinedView.data) {
+                this.renderPortfolioChart(this.combinedView.data);
+            }
+        });
+
+        // Animal toggle (cats/dogs)
+        document.getElementById('combined-animal-toggle')?.addEventListener('change', (e) => {
+            this.combinedView.currentAnimal = e.target.checked ? 'dogs' : 'cats';
         });
     },
 
@@ -142,6 +227,11 @@ const Watchlist = {
                         <span class="text-xs text-gray-500 dark:text-gray-400">(${watchlist.tickers.length})</span>
                     </div>
                     <div class="flex items-center gap-1">
+                        <button class="p-1 text-gray-400 hover:text-primary combined-view-btn ${watchlist.tickers.length === 0 ? 'opacity-30 cursor-not-allowed' : ''}" data-watchlist-id="${watchlist.id}" title="Combined View" ${watchlist.tickers.length === 0 ? 'disabled' : ''}>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                            </svg>
+                        </button>
                         <button class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rename-watchlist-btn" data-watchlist-id="${watchlist.id}" title="Rename">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -173,6 +263,15 @@ const Watchlist = {
 
                 const watchlistId = header.dataset.watchlistId;
                 this.toggleWatchlist(watchlistId);
+            });
+        });
+
+        // Combined view buttons
+        document.querySelectorAll('.combined-view-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const watchlistId = btn.dataset.watchlistId;
+                this.openCombinedView(watchlistId);
             });
         });
 
@@ -464,6 +563,950 @@ const Watchlist = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    // ============================================
+    // Combined View Methods
+    // ============================================
+
+    /**
+     * Open combined view for a watchlist
+     */
+    async openCombinedView(watchlistId) {
+        const watchlist = this.watchlists.find(w => w.id === watchlistId);
+        if (!watchlist || watchlist.tickers.length === 0) return;
+
+        this.combinedView.watchlistId = watchlistId;
+        this.combinedView.isOpen = true;
+        this.combinedView.period = '1y';
+        this.combinedView.benchmark = null;
+
+        // Show the modal
+        const modal = document.getElementById('combined-view-modal');
+        if (modal) modal.classList.remove('hidden');
+
+        // Update title
+        const titleEl = document.getElementById('combined-view-title');
+        if (titleEl) titleEl.textContent = watchlist.name;
+
+        // Reset UI state
+        this.updatePeriodButtons('1y');
+        this.updateBenchmarkButtons(null);
+
+        // Reset markers checkbox
+        this.combinedView.showMarkers = true;
+        const markersCheckbox = document.getElementById('combined-show-markers');
+        if (markersCheckbox) markersCheckbox.checked = true;
+
+        // Reset animal toggle to cats
+        this.combinedView.currentAnimal = 'cats';
+        const animalToggle = document.getElementById('combined-animal-toggle');
+        if (animalToggle) animalToggle.checked = false;
+
+        // Fetch and display data
+        await this.loadCombinedData();
+
+        // Also load market news
+        this.loadMarketNews();
+    },
+
+    /**
+     * Close combined view
+     */
+    closeCombinedView() {
+        const modal = document.getElementById('combined-view-modal');
+        if (modal) modal.classList.add('hidden');
+        this.combinedView.isOpen = false;
+        // Hide hover card if open
+        this.hideCombinedHoverCard();
+    },
+
+    /**
+     * Load combined portfolio data
+     */
+    async loadCombinedData() {
+        const { watchlistId, period, benchmark } = this.combinedView;
+        if (!watchlistId) return;
+
+        try {
+            const data = await API.getCombinedPortfolio(watchlistId, period, benchmark);
+            this.combinedView.data = data;
+            this.renderCombinedView(data);
+        } catch (error) {
+            console.error('Failed to load combined portfolio:', error);
+            const chartEl = document.getElementById('portfolio-chart');
+            if (chartEl) {
+                chartEl.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Failed to load portfolio data</div>';
+            }
+        }
+    },
+
+    /**
+     * Render combined view with data
+     */
+    renderCombinedView(data) {
+        // Update return display
+        const returnEl = document.getElementById('combined-view-return');
+        if (returnEl) {
+            const isPositive = data.totalReturn >= 0;
+            returnEl.textContent = `${isPositive ? '+' : ''}${data.totalReturn.toFixed(2)}%`;
+            returnEl.className = `text-xl font-bold ${isPositive ? 'text-green-500' : 'text-red-500'}`;
+        }
+
+        // Render weights
+        this.renderWeights(data.tickerWeights);
+
+        // Render chart
+        this.renderPortfolioChart(data);
+    },
+
+    /**
+     * Render portfolio weights
+     */
+    renderWeights(weights) {
+        const container = document.getElementById('combined-weights');
+        if (!container) return;
+
+        container.innerHTML = Object.entries(weights)
+            .sort((a, b) => b[1] - a[1])
+            .map(([ticker, weight]) => `
+                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">
+                    <span class="font-medium">${ticker}</span>
+                    <span class="text-gray-500 dark:text-gray-400">${weight.toFixed(1)}%</span>
+                </span>
+            `).join('');
+    },
+
+    /**
+     * Render portfolio chart using Plotly
+     */
+    renderPortfolioChart(data) {
+        const chartEl = document.getElementById('portfolio-chart');
+        if (!chartEl) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const themeColors = {
+            background: isDark ? '#1F2937' : '#FFFFFF',
+            paper: isDark ? '#1F2937' : '#FFFFFF',
+            text: isDark ? '#FFFFFF' : '#111827',
+            gridColor: isDark ? '#374151' : '#E5E7EB',
+            axisColor: isDark ? '#9CA3AF' : '#6B7280'
+        };
+
+        const traces = [];
+
+        // Portfolio line
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            x: data.data.map(d => d.date),
+            y: data.data.map(d => d.percentChange),
+            name: data.watchlistName,
+            line: { color: '#3B82F6', width: 2.5 },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(59, 130, 246, 0.1)'
+        });
+
+        // Benchmark if available
+        if (data.benchmarkData && data.benchmarkSymbol) {
+            traces.push({
+                type: 'scatter',
+                mode: 'lines',
+                x: data.benchmarkData.map(d => d.date),
+                y: data.benchmarkData.map(d => d.percentChange),
+                name: data.benchmarkSymbol,
+                line: { color: '#F59E0B', width: 2, dash: 'dash' }
+            });
+        }
+
+        // Zero baseline
+        const dates = data.data.map(d => d.date);
+        traces.push({
+            type: 'scatter',
+            mode: 'lines',
+            x: [dates[0], dates[dates.length - 1]],
+            y: [0, 0],
+            name: 'Baseline',
+            line: { color: themeColors.gridColor, width: 1, dash: 'dot' },
+            showlegend: false,
+            hoverinfo: 'skip'
+        });
+
+        // Significant move markers (if enabled and data exists)
+        if (this.combinedView.showMarkers && data.significantMoves && data.significantMoves.length > 0) {
+            // Create a lookup for percentChange by date
+            const dataByDate = {};
+            data.data.forEach(d => {
+                dataByDate[d.date] = d.percentChange;
+            });
+
+            // Positive moves (green triangles pointing up)
+            const positiveMoves = data.significantMoves.filter(m => m.isPositive);
+            if (positiveMoves.length > 0) {
+                traces.push({
+                    type: 'scatter',
+                    mode: 'markers+text',
+                    x: positiveMoves.map(m => m.date),
+                    y: positiveMoves.map(m => dataByDate[m.date] || 0),
+                    text: positiveMoves.map(m => `+${m.percentChange.toFixed(1)}%`),
+                    textposition: 'top center',
+                    textfont: { size: 10, color: '#10B981' },
+                    name: 'Gains ≥5%',
+                    marker: {
+                        symbol: 'triangle-up',
+                        size: 12,
+                        color: '#10B981',
+                        line: { color: '#FFFFFF', width: 1 }
+                    },
+                    hovertemplate: '%{x}<br>+%{customdata:.1f}%<extra>Significant Gain</extra>',
+                    customdata: positiveMoves.map(m => m.percentChange)
+                });
+            }
+
+            // Negative moves (red triangles pointing down)
+            const negativeMoves = data.significantMoves.filter(m => !m.isPositive);
+            if (negativeMoves.length > 0) {
+                traces.push({
+                    type: 'scatter',
+                    mode: 'markers+text',
+                    x: negativeMoves.map(m => m.date),
+                    y: negativeMoves.map(m => dataByDate[m.date] || 0),
+                    text: negativeMoves.map(m => `${m.percentChange.toFixed(1)}%`),
+                    textposition: 'bottom center',
+                    textfont: { size: 10, color: '#EF4444' },
+                    name: 'Losses ≥5%',
+                    marker: {
+                        symbol: 'triangle-down',
+                        size: 12,
+                        color: '#EF4444',
+                        line: { color: '#FFFFFF', width: 1 }
+                    },
+                    hovertemplate: '%{x}<br>%{customdata:.1f}%<extra>Significant Loss</extra>',
+                    customdata: negativeMoves.map(m => m.percentChange)
+                });
+            }
+        }
+
+        const layout = {
+            title: {
+                text: `${data.watchlistName} - ${data.period.toUpperCase()}`,
+                font: { size: 16, color: themeColors.text }
+            },
+            xaxis: {
+                rangeslider: { visible: false },
+                gridcolor: themeColors.gridColor,
+                tickfont: { color: themeColors.axisColor }
+            },
+            yaxis: {
+                title: { text: '% Change', font: { color: themeColors.axisColor } },
+                gridcolor: themeColors.gridColor,
+                tickfont: { color: themeColors.axisColor },
+                ticksuffix: '%'
+            },
+            plot_bgcolor: themeColors.background,
+            paper_bgcolor: themeColors.paper,
+            showlegend: true,
+            legend: {
+                orientation: 'h',
+                yanchor: 'top',
+                y: -0.1,
+                xanchor: 'center',
+                x: 0.5,
+                font: { color: themeColors.text }
+            },
+            margin: { t: 50, r: 30, b: 80, l: 60 }
+        };
+
+        Plotly.newPlot(chartEl, traces, layout, { responsive: true });
+
+        // Set up hover events for significant move markers
+        if (this.combinedView.showMarkers && data.significantMoves && data.significantMoves.length > 0) {
+            const plot = chartEl;
+
+            plot.on('plotly_hover', (eventData) => {
+                const point = eventData.points[0];
+                // Check if this is a significant move marker (by trace name)
+                if (point.data.name === 'Gains ≥5%' || point.data.name === 'Losses ≥5%') {
+                    // Cancel any pending hide
+                    if (this.combinedView.hideTimeout) {
+                        clearTimeout(this.combinedView.hideTimeout);
+                        this.combinedView.hideTimeout = null;
+                    }
+                    // Cancel any pending show and reschedule
+                    if (this.combinedView.hoverTimeout) clearTimeout(this.combinedView.hoverTimeout);
+                    this.combinedView.hoverTimeout = setTimeout(() => {
+                        const moveData = {
+                            date: point.x,
+                            percentChange: point.customdata
+                        };
+                        this.showCombinedHoverCard(eventData.event, moveData);
+                    }, 150);
+                }
+            });
+
+            plot.on('plotly_unhover', () => {
+                if (this.combinedView.hoverTimeout) {
+                    clearTimeout(this.combinedView.hoverTimeout);
+                    this.combinedView.hoverTimeout = null;
+                }
+                this.scheduleCombinedHideHoverCard();
+            });
+
+            // Setup hover card mouse events (only once)
+            this.setupCombinedHoverCardListeners();
+        }
+    },
+
+    /**
+     * Setup hover card mouse event listeners
+     */
+    setupCombinedHoverCardListeners() {
+        const card = document.getElementById('wiki-hover-card');
+        if (card && !card.dataset.combinedListenersAttached) {
+            card.dataset.combinedListenersAttached = 'true';
+            card.addEventListener('mouseenter', () => {
+                this.combinedView.isHoverCardHovered = true;
+                if (this.combinedView.hideTimeout) {
+                    clearTimeout(this.combinedView.hideTimeout);
+                    this.combinedView.hideTimeout = null;
+                }
+            });
+            card.addEventListener('mouseleave', () => {
+                this.combinedView.isHoverCardHovered = false;
+                this.scheduleCombinedHideHoverCard();
+            });
+        }
+    },
+
+    /**
+     * Show hover card for combined view significant move
+     */
+    showCombinedHoverCard(event, moveData) {
+        // Cancel any pending hide
+        if (this.combinedView.hideTimeout) {
+            clearTimeout(this.combinedView.hideTimeout);
+            this.combinedView.hideTimeout = null;
+        }
+
+        const card = document.getElementById('wiki-hover-card');
+        const image = document.getElementById('wiki-hover-image');
+        const placeholder = document.getElementById('wiki-hover-placeholder');
+        const dateEl = document.getElementById('wiki-hover-date');
+        const returnEl = document.getElementById('wiki-hover-return');
+        const headlineEl = document.getElementById('wiki-hover-headline');
+        const summaryEl = document.getElementById('wiki-hover-summary');
+        const sourceEl = document.getElementById('wiki-hover-source');
+
+        // Format date
+        const moveDate = new Date(moveData.date);
+        dateEl.textContent = moveDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Format return
+        const isPositive = moveData.percentChange >= 0;
+        const magnitude = Math.abs(moveData.percentChange) >= 10 ? 'extreme' :
+                          Math.abs(moveData.percentChange) >= 5 ? 'major' : 'significant';
+        returnEl.textContent = `${isPositive ? '+' : ''}${moveData.percentChange.toFixed(2)}% ${magnitude} move`;
+        returnEl.className = `text-sm font-bold mb-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`;
+
+        // Get a random market news article
+        const news = this.combinedView.marketNews.length > 0
+            ? this.combinedView.marketNews[Math.floor(Math.random() * this.combinedView.marketNews.length)]
+            : null;
+
+        // Get image from App's cache if available
+        const getAnimalImage = () => {
+            image.onerror = () => {
+                image.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            };
+
+            // Use combined view's animal preference
+            const animal = this.combinedView.currentAnimal;
+
+            // Try to use App's image cache
+            if (window.App && typeof window.App.getImageFromCache === 'function') {
+                const cachedUrl = window.App.getImageFromCache(animal);
+                if (cachedUrl) {
+                    image.src = cachedUrl;
+                    image.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    return;
+                }
+            }
+
+            // Fallback to backend fetch
+            const endpoint = animal === 'dogs' ? '/api/images/dog' : '/api/images/cat';
+            fetch(endpoint)
+                .then(async (response) => {
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        image.src = URL.createObjectURL(blob);
+                        image.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                    } else {
+                        image.classList.add('hidden');
+                        placeholder.classList.remove('hidden');
+                    }
+                })
+                .catch(() => {
+                    image.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                });
+        };
+
+        if (news) {
+            getAnimalImage();
+
+            headlineEl.textContent = news.headline;
+            headlineEl.href = news.url || '#';
+            headlineEl.style.display = 'block';
+
+            summaryEl.textContent = news.summary || '';
+            summaryEl.style.display = news.summary ? 'block' : 'none';
+
+            const newsDate = new Date(news.publishedAt);
+            sourceEl.textContent = `${news.source} • ${newsDate.toLocaleDateString()}`;
+        } else {
+            getAnimalImage();
+
+            headlineEl.textContent = 'Market news unavailable';
+            headlineEl.href = '#';
+            headlineEl.style.display = 'block';
+
+            summaryEl.textContent = 'No market news articles are currently available.';
+            summaryEl.style.display = 'block';
+
+            sourceEl.textContent = '';
+        }
+
+        // Position the card near the cursor
+        const x = event.clientX || event.pageX;
+        const y = event.clientY || event.pageY;
+        const cardWidth = 320;
+        const cardHeight = 280;
+        const padding = 15;
+
+        let left = x + padding;
+        let top = y - cardHeight / 2;
+
+        // Keep within viewport
+        if (left + cardWidth > window.innerWidth) {
+            left = x - cardWidth - padding;
+        }
+        if (top < padding) {
+            top = padding;
+        }
+        if (top + cardHeight > window.innerHeight) {
+            top = window.innerHeight - cardHeight - padding;
+        }
+
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+        card.classList.remove('hidden');
+    },
+
+    /**
+     * Schedule hiding the hover card
+     */
+    scheduleCombinedHideHoverCard() {
+        if (this.combinedView.hideTimeout) {
+            clearTimeout(this.combinedView.hideTimeout);
+        }
+        this.combinedView.hideTimeout = setTimeout(() => {
+            if (!this.combinedView.isHoverCardHovered) {
+                this.hideCombinedHoverCard();
+            }
+        }, 300);
+    },
+
+    /**
+     * Hide the hover card
+     */
+    hideCombinedHoverCard() {
+        const card = document.getElementById('wiki-hover-card');
+        if (card) {
+            card.classList.add('hidden');
+            // Clear image to prevent flash of old image
+            const image = document.getElementById('wiki-hover-image');
+            if (image) image.src = '';
+        }
+    },
+
+    /**
+     * Change combined view period
+     */
+    async changeCombinedPeriod(period) {
+        this.combinedView.period = period;
+        this.updatePeriodButtons(period);
+        await this.loadCombinedData();
+    },
+
+    /**
+     * Toggle benchmark comparison
+     */
+    async toggleBenchmark(benchmark) {
+        if (this.combinedView.benchmark === benchmark) {
+            this.clearBenchmark();
+        } else {
+            this.combinedView.benchmark = benchmark;
+            this.updateBenchmarkButtons(benchmark);
+            await this.loadCombinedData();
+        }
+    },
+
+    /**
+     * Clear benchmark comparison
+     */
+    async clearBenchmark() {
+        this.combinedView.benchmark = null;
+        this.updateBenchmarkButtons(null);
+        await this.loadCombinedData();
+    },
+
+    /**
+     * Update period button styles
+     */
+    updatePeriodButtons(activePeriod) {
+        document.querySelectorAll('#combined-period-buttons button').forEach(btn => {
+            const period = btn.dataset.period;
+            if (period === activePeriod) {
+                btn.className = 'px-3 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-primary text-white';
+            } else {
+                btn.className = 'px-3 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+            }
+        });
+    },
+
+    /**
+     * Update benchmark button styles
+     */
+    updateBenchmarkButtons(activeBenchmark) {
+        const clearBtn = document.getElementById('combined-clear-benchmark');
+
+        document.querySelectorAll('#combined-benchmark-buttons button[data-benchmark]').forEach(btn => {
+            const benchmark = btn.dataset.benchmark;
+            if (benchmark === activeBenchmark) {
+                btn.className = 'px-3 py-1 text-sm rounded-lg border border-orange-400 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400';
+            } else {
+                btn.className = 'px-3 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+            }
+        });
+
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !activeBenchmark);
+        }
+    },
+
+    /**
+     * Load and display market news
+     */
+    async loadMarketNews() {
+        const container = document.getElementById('market-news-list');
+        if (!container) return;
+
+        container.innerHTML = '<div class="text-center text-gray-500">Loading market news...</div>';
+
+        try {
+            const result = await API.getMarketNews('general');
+            // Store news in state for hover cards
+            this.combinedView.marketNews = result.articles || [];
+
+            if (result.articles && result.articles.length > 0) {
+                container.innerHTML = result.articles.slice(0, 5).map(article => `
+                    <div class="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-4 last:pb-0">
+                        <a href="${article.url}" target="_blank" rel="noopener noreferrer"
+                           class="text-sm font-medium text-gray-900 dark:text-white hover:text-primary line-clamp-2">
+                            ${this.escapeHtml(article.headline)}
+                        </a>
+                        <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>${article.source}</span>
+                            <span>&bull;</span>
+                            <span>${this.formatRelativeTime(article.publishedAt)}</span>
+                        </div>
+                        ${article.summary ? `<p class="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">${this.escapeHtml(article.summary)}</p>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="text-center text-gray-500">No market news available</div>';
+            }
+        } catch (error) {
+            console.error('Failed to load market news:', error);
+            this.combinedView.marketNews = [];
+            container.innerHTML = '<div class="text-center text-gray-500">Failed to load market news</div>';
+        }
+    },
+
+    /**
+     * Format relative time
+     */
+    formatRelativeTime(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffHours < 1) return 'Just now';
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString();
+    },
+
+    // ============================================
+    // Holdings Editor Methods
+    // ============================================
+
+    /**
+     * Open holdings editor modal
+     */
+    async openHoldingsModal(watchlistId) {
+        const watchlist = this.watchlists.find(w => w.id === watchlistId);
+        if (!watchlist) return;
+
+        this.holdingsEditor.watchlistId = watchlistId;
+        // Create local copy of tickers for editing
+        this.holdingsEditor.localTickers = [...watchlist.tickers];
+
+        // Update modal title
+        const title = document.getElementById('holdings-modal-title');
+        if (title) title.textContent = `Edit Holdings - ${watchlist.name}`;
+
+        // Set weighting mode radio
+        const mode = watchlist.weightingMode || 'equal';
+        const radio = document.querySelector(`input[name="weighting-mode"][value="${mode}"]`);
+        if (radio) radio.checked = true;
+
+        // Clear search input
+        const searchInput = document.getElementById('holdings-ticker-search');
+        if (searchInput) searchInput.value = '';
+        this.hideHoldingsSearchResults();
+
+        // Fetch current quotes
+        try {
+            const quotes = await API.getWatchlistQuotes(watchlistId);
+            this.holdingsEditor.quotes = quotes;
+        } catch (error) {
+            console.error('Failed to fetch quotes:', error);
+            this.holdingsEditor.quotes = null;
+        }
+
+        // Render holdings inputs
+        this.renderHoldingsInputs(watchlist);
+
+        // Show modal
+        const modal = document.getElementById('holdings-modal');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    /**
+     * Close holdings modal
+     */
+    closeHoldingsModal() {
+        const modal = document.getElementById('holdings-modal');
+        if (modal) modal.classList.add('hidden');
+
+        // Combined view is already visible underneath if we came from there
+        // Just clean up state
+        this.holdingsEditor.returnToCombinedView = false;
+        this.holdingsEditor.watchlistId = null;
+        this.holdingsEditor.quotes = null;
+        this.holdingsEditor.localTickers = [];
+    },
+
+    /**
+     * Render holdings input fields
+     */
+    renderHoldingsInputs(watchlist) {
+        const container = document.getElementById('holdings-inputs');
+        if (!container) return;
+
+        const mode = document.querySelector('input[name="weighting-mode"]:checked')?.value || 'equal';
+        const quotes = this.holdingsEditor.quotes?.quotes || [];
+        const tickers = this.holdingsEditor.localTickers;
+
+        if (tickers.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 italic py-4 text-center">No tickers. Use the search above to add some.</p>';
+            return;
+        }
+
+        container.innerHTML = tickers.map(ticker => {
+            const quote = quotes.find(q => q.symbol === ticker);
+            const holding = watchlist.holdings?.find(h => h.ticker === ticker);
+            const price = quote?.price;
+            const priceStr = price ? `$${price.toFixed(2)}` : 'N/A';
+
+            let inputHtml = '';
+            if (mode === 'shares') {
+                const shares = holding?.shares ?? '';
+                inputHtml = `
+                    <input type="number" class="holding-input w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded"
+                           data-ticker="${ticker}" data-type="shares" value="${shares}" min="0" step="any" placeholder="Shares">
+                `;
+            } else if (mode === 'dollars') {
+                const dollars = holding?.dollarValue ?? '';
+                inputHtml = `
+                    <input type="number" class="holding-input w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded"
+                           data-ticker="${ticker}" data-type="dollars" value="${dollars}" min="0" step="any" placeholder="$">
+                `;
+            } else {
+                inputHtml = `<span class="text-sm text-gray-500">Equal</span>`;
+            }
+
+            return `
+                <div class="flex items-center justify-between py-2 px-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded">
+                    <div class="flex items-center gap-2">
+                        <button class="holdings-remove-ticker text-gray-400 hover:text-red-500 transition-colors" data-ticker="${ticker}" title="Remove ${ticker}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                        <span class="font-medium text-gray-900 dark:text-white">${ticker}</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">${priceStr}</span>
+                    </div>
+                    ${inputHtml}
+                </div>
+            `;
+        }).join('');
+
+        // Bind remove ticker events
+        container.querySelectorAll('.holdings-remove-ticker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ticker = btn.dataset.ticker;
+                this.removeTickerFromHoldings(ticker);
+            });
+        });
+    },
+
+    /**
+     * Update holdings inputs when weighting mode changes
+     */
+    updateHoldingsInputs() {
+        const watchlist = this.watchlists.find(w => w.id === this.holdingsEditor.watchlistId);
+        if (watchlist) {
+            this.renderHoldingsInputs(watchlist);
+        }
+    },
+
+    /**
+     * Save holdings from modal
+     */
+    async saveHoldings() {
+        const watchlistId = this.holdingsEditor.watchlistId;
+        if (!watchlistId) return;
+
+        const watchlist = this.watchlists.find(w => w.id === watchlistId);
+        if (!watchlist) return;
+
+        const mode = document.querySelector('input[name="weighting-mode"]:checked')?.value || 'equal';
+        const holdings = [];
+        const localTickers = this.holdingsEditor.localTickers;
+        const shouldReturnToCombined = this.holdingsEditor.returnToCombinedView;
+
+        // Build holdings from inputs
+        if (mode !== 'equal') {
+            document.querySelectorAll('.holding-input').forEach(input => {
+                const ticker = input.dataset.ticker;
+                const type = input.dataset.type;
+                const value = parseFloat(input.value) || 0;
+
+                if (value > 0) {
+                    holdings.push({
+                        ticker,
+                        shares: type === 'shares' ? value : null,
+                        dollarValue: type === 'dollars' ? value : null
+                    });
+                }
+            });
+        }
+
+        try {
+            // First, sync tickers (add new, remove deleted)
+            const originalTickers = new Set(watchlist.tickers);
+            const newTickers = new Set(localTickers);
+
+            // Add new tickers
+            for (const ticker of localTickers) {
+                if (!originalTickers.has(ticker)) {
+                    await API.addTickerToWatchlist(watchlistId, ticker);
+                }
+            }
+
+            // Remove deleted tickers
+            for (const ticker of watchlist.tickers) {
+                if (!newTickers.has(ticker)) {
+                    await API.removeTickerFromWatchlist(watchlistId, ticker);
+                }
+            }
+
+            // Update holdings
+            await API.updateWatchlistHoldings(watchlistId, mode, holdings);
+
+            // Close modal
+            const modal = document.getElementById('holdings-modal');
+            if (modal) modal.classList.add('hidden');
+
+            // Reload watchlists
+            await this.loadWatchlists();
+
+            // Refresh combined view if it's open (it's visible underneath the modal)
+            if (shouldReturnToCombined && this.combinedView.isOpen) {
+                // Update the title in case watchlist name changed
+                const updatedWatchlist = this.watchlists.find(w => w.id === watchlistId);
+                if (updatedWatchlist) {
+                    const titleEl = document.getElementById('combined-view-title');
+                    if (titleEl) titleEl.textContent = updatedWatchlist.name;
+                }
+                // Reload the chart data
+                await this.loadCombinedData();
+            }
+
+            // Clear holdings editor state
+            this.holdingsEditor.returnToCombinedView = false;
+            this.holdingsEditor.watchlistId = null;
+            this.holdingsEditor.quotes = null;
+            this.holdingsEditor.localTickers = [];
+        } catch (error) {
+            console.error('Failed to save holdings:', error);
+            alert('Failed to save holdings. Please try again.');
+        }
+    },
+
+    /**
+     * Handle ticker search in holdings modal
+     */
+    handleHoldingsSearch(query) {
+        // Debounce search
+        if (this.holdingsEditor.searchTimeout) {
+            clearTimeout(this.holdingsEditor.searchTimeout);
+        }
+
+        if (!query || query.length < 1) {
+            this.hideHoldingsSearchResults();
+            return;
+        }
+
+        this.holdingsEditor.searchTimeout = setTimeout(async () => {
+            try {
+                const results = await API.search(query);
+                this.showHoldingsSearchResults(results);
+            } catch (error) {
+                console.error('Search failed:', error);
+                this.hideHoldingsSearchResults();
+            }
+        }, 300);
+    },
+
+    /**
+     * Show search results dropdown in holdings modal
+     */
+    showHoldingsSearchResults(results) {
+        const container = document.getElementById('holdings-search-results');
+        if (!container) return;
+
+        if (!results || results.length === 0) {
+            container.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">No results found</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        // Filter out tickers already in the list
+        const existingTickers = new Set(this.holdingsEditor.localTickers.map(t => t.toUpperCase()));
+        const filteredResults = results.filter(r => !existingTickers.has(r.symbol.toUpperCase()));
+
+        if (filteredResults.length === 0) {
+            container.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">All matching tickers already added</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        container.innerHTML = filteredResults.slice(0, 5).map(result => `
+            <button class="holdings-search-result w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 flex justify-between items-center"
+                    data-symbol="${result.symbol}">
+                <span class="font-medium text-gray-900 dark:text-white">${result.symbol}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400 truncate ml-2">${result.name || ''}</span>
+            </button>
+        `).join('');
+
+        // Bind click events
+        container.querySelectorAll('.holdings-search-result').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const symbol = btn.dataset.symbol;
+                this.addTickerToHoldings(symbol);
+            });
+        });
+
+        container.classList.remove('hidden');
+    },
+
+    /**
+     * Hide holdings search results
+     */
+    hideHoldingsSearchResults() {
+        const container = document.getElementById('holdings-search-results');
+        if (container) container.classList.add('hidden');
+    },
+
+    /**
+     * Add a ticker to the local holdings list
+     */
+    async addTickerToHoldings(ticker) {
+        if (!ticker) return;
+
+        const upperTicker = ticker.toUpperCase();
+        if (this.holdingsEditor.localTickers.includes(upperTicker)) {
+            return; // Already in list
+        }
+
+        // Add to local tickers
+        this.holdingsEditor.localTickers.push(upperTicker);
+
+        // Clear search
+        const searchInput = document.getElementById('holdings-ticker-search');
+        if (searchInput) searchInput.value = '';
+        this.hideHoldingsSearchResults();
+
+        // Fetch quote for new ticker and update quotes
+        try {
+            const stockInfo = await API.getStockInfo(upperTicker);
+            if (stockInfo && this.holdingsEditor.quotes) {
+                this.holdingsEditor.quotes.quotes = this.holdingsEditor.quotes.quotes || [];
+                this.holdingsEditor.quotes.quotes.push({
+                    symbol: upperTicker,
+                    price: stockInfo.currentPrice,
+                    change: stockInfo.dayChange,
+                    changePercent: stockInfo.dayChangePercent
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch quote for new ticker:', error);
+        }
+
+        // Re-render the holdings inputs
+        const watchlist = this.watchlists.find(w => w.id === this.holdingsEditor.watchlistId);
+        if (watchlist) {
+            this.renderHoldingsInputs(watchlist);
+        }
+    },
+
+    /**
+     * Remove a ticker from the local holdings list
+     */
+    removeTickerFromHoldings(ticker) {
+        const index = this.holdingsEditor.localTickers.indexOf(ticker);
+        if (index > -1) {
+            this.holdingsEditor.localTickers.splice(index, 1);
+        }
+
+        // Re-render the holdings inputs
+        const watchlist = this.watchlists.find(w => w.id === this.holdingsEditor.watchlistId);
+        if (watchlist) {
+            this.renderHoldingsInputs(watchlist);
+        }
     }
 };
 

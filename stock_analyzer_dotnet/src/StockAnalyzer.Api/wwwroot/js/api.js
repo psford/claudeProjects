@@ -217,5 +217,53 @@ const API = {
             throw new Error('Failed to fetch watchlist quotes');
         }
         return response.json();
+    },
+
+    /**
+     * Update holdings for a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} weightingMode - "equal", "shares", or "dollars"
+     * @param {Array} holdings - Array of {ticker, shares, dollarValue}
+     */
+    async updateWatchlistHoldings(id, weightingMode, holdings) {
+        const response = await fetch(`${this.baseUrl}/watchlists/${id}/holdings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weightingMode, holdings })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update holdings');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get combined portfolio performance for a watchlist
+     * @param {string} id - Watchlist ID
+     * @param {string} period - Time period (1mo, 3mo, 6mo, 1y, 2y)
+     * @param {string} benchmark - Optional benchmark ticker (SPY, QQQ)
+     */
+    async getCombinedPortfolio(id, period = '1y', benchmark = null) {
+        let url = `${this.baseUrl}/watchlists/${id}/combined?period=${period}`;
+        if (benchmark) {
+            url += `&benchmark=${benchmark}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Failed to fetch combined portfolio');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get general market news
+     * @param {string} category - News category: general, forex, crypto, merger
+     */
+    async getMarketNews(category = 'general') {
+        const response = await fetch(`${this.baseUrl}/news/market?category=${category}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch market news');
+        }
+        return response.json();
     }
 };

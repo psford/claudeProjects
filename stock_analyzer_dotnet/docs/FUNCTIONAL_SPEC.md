@@ -1,6 +1,6 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.9
+**Version:** 2.0
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -456,6 +456,93 @@ The Stock Analyzer Dashboard allows users to:
 
 ---
 
+### 3.15 Combined Watchlist View (FR-015)
+
+**Purpose:** Allow users to view their watchlist as an aggregated portfolio with combined performance metrics, benchmark comparison, and significant move indicators.
+
+| ID | Requirement |
+|----|-------------|
+| FR-015.1 | The system must provide a "Combined View" button for each watchlist with tickers |
+| FR-015.2 | The system must display a single aggregated performance line representing the portfolio |
+| FR-015.3 | The system must support three weighting modes: Equal Weight (default), Number of Shares, Dollar Value |
+| FR-015.4 | The system must use historical close prices for each date when calculating portfolio value over time |
+| FR-015.5 | The system must persist holdings (shares/dollar values) and weighting mode to storage |
+| FR-015.6 | The chart title must display the watchlist name (not individual ticker symbols) |
+| FR-015.7 | The system must display portfolio total return and day change in the Combined View header |
+| FR-015.8 | The system must allow comparing the portfolio against benchmark indices (SPY, QQQ) |
+| FR-015.9 | The system must display general market news instead of stock-specific news in Combined View |
+| FR-015.10 | The system must provide a Holdings Editor modal to configure weighting mode and values |
+| FR-015.11 | The Holdings Editor must allow adding new tickers via search |
+| FR-015.12 | The Holdings Editor must allow removing tickers from the watchlist |
+| FR-015.13 | The Holdings Editor must show current price for each ticker |
+| FR-015.14 | The system must display ticker weights below the chart |
+| FR-015.15 | The system must support period selection (1M, 3M, 6M, 1Y, 2Y) in Combined View |
+| FR-015.16 | The system must display significant move markers (±5% days) on the combined portfolio chart |
+| FR-015.17 | The system must provide a toggle to show/hide significant move markers |
+
+**User Story:** *As an investor, I want to see my watchlist as an aggregated portfolio so that I can track the combined performance of my holdings without analyzing each stock individually.*
+
+**Combined View Layout:**
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  [←] Tech Stocks                          +12.5% (1Y)    [Edit Holdings]│
+│  Combined View                                                          │
+├────────────────────────────────────────────────────────────────────────┤
+│  Period: [1M] [3M] [6M] [1Y*] [2Y]     Compare: [SPY] [QQQ] [Clear]    │
+│                                         ☑ Show ±5% Moves               │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  % Change                                                               │
+│     ^      ___/\___     ▲ +5.2%                                        │
+│  +15|     /        \    /\      ── Tech Stocks (blue)                  │
+│  +10|    /          \  /  \     -- SPY (orange, dashed)                │
+│   +5|   /            \/    \    ▲▼ Significant moves                   │
+│    0|--/----------------------\--------------------------------         │
+│   -5|                          \___/  ▼ -6.1%                          │
+│     +-------------------------------------------------> Date           │
+│                                                                         │
+├────────────────────────────────────────────────────────────────────────┤
+│  Weights: AAPL 40% | MSFT 35% | GOOGL 25%                              │
+├────────────────────────────────────────────────────────────────────────┤
+│  Market News                                                            │
+│  • Fed signals rate decision coming...        Reuters • 2h ago         │
+│  • Tech stocks rally on earnings...           CNBC • 4h ago            │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Holdings Editor Modal:**
+
+```
+┌─────────────────────────────────────────┐
+│  Edit Holdings - Tech Stocks        [X] │
+├─────────────────────────────────────────┤
+│  Weighting Mode:                        │
+│  (•) Equal Weight                       │
+│  ( ) Number of Shares                   │
+│  ( ) Dollar Value                       │
+├─────────────────────────────────────────┤
+│  Add Ticker: [________________] 🔍      │
+├─────────────────────────────────────────┤
+│  Current Holdings:                      │
+│  [X] AAPL   $185.50   [___10___] shares │
+│  [X] MSFT   $415.20   [____5___] shares │
+│  [X] GOOGL  $142.80   [___15___] shares │
+├─────────────────────────────────────────┤
+│              [Cancel]  [Save Holdings]  │
+└─────────────────────────────────────────┘
+```
+
+**Aggregation Logic:**
+
+| Mode | Calculation |
+|------|-------------|
+| Equal Weight | Average of normalized percentage returns for each ticker |
+| Shares | Σ(shares × close price) for each historical date |
+| Dollars | Convert initial dollars to shares at period start, then track value |
+
+---
+
 ## 4. User Interface Specifications
 
 ### 4.1 Page Layout
@@ -698,6 +785,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 2.0 | 2026-01-17 | Added Combined Watchlist View (FR-015): Aggregated portfolio performance, three weighting modes, benchmark comparison, holdings editor with add/remove tickers, significant move markers with toggle, market news | Claude |
 | 1.9 | 2026-01-17 | Added Watchlist Management (FR-014): Create/rename/delete watchlists, add/remove tickers, sidebar UI, JSON persistence, multi-user ready | Claude |
 | 1.8 | 2026-01-17 | Added Bollinger Bands to Technical Indicators (FR-011): 20-period SMA with 2 std dev bands, overlaid on price chart with shaded fill | Claude |
 | 1.7 | 2026-01-17 | Added Documentation Page (FR-013): Tabbed docs viewer, Mermaid.js architecture diagrams, Fuse.js search, scroll spy TOC highlighting, resizable sidebar | Claude |

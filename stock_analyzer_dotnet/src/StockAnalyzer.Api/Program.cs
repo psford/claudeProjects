@@ -500,6 +500,67 @@ app.MapGet("/api/watchlists/{id}/quotes", async (string id, WatchlistService wat
 .Produces<WatchlistQuotes>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
+// PUT /api/watchlists/{id}/holdings - Update holdings for a watchlist
+app.MapPut("/api/watchlists/{id}/holdings", async (
+    string id,
+    UpdateHoldingsRequest request,
+    WatchlistService watchlistService) =>
+{
+    var validModes = new[] { "equal", "shares", "dollars" };
+    if (!validModes.Contains(request.WeightingMode.ToLower()))
+    {
+        return Results.BadRequest(new { error = "Invalid weighting mode. Must be: equal, shares, or dollars" });
+    }
+
+    try
+    {
+        var watchlist = await watchlistService.UpdateHoldingsAsync(id, request);
+        return watchlist != null
+            ? Results.Ok(watchlist)
+            : Results.NotFound(new { error = "Watchlist not found", id });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateWatchlistHoldings")
+.WithOpenApi()
+.Produces<StockAnalyzer.Core.Models.Watchlist>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/watchlists/{id}/combined - Get combined portfolio performance
+app.MapGet("/api/watchlists/{id}/combined", async (
+    string id,
+    string? period,
+    string? benchmark,
+    WatchlistService watchlistService) =>
+{
+    var result = await watchlistService.GetCombinedPortfolioAsync(
+        id,
+        period ?? "1y",
+        benchmark);
+
+    return result != null
+        ? Results.Ok(result)
+        : Results.NotFound(new { error = "Watchlist not found or no data available", id });
+})
+.WithName("GetCombinedPortfolio")
+.WithOpenApi()
+.Produces<CombinedPortfolioResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
+// GET /api/news/market - Get general market news
+app.MapGet("/api/news/market", async (string? category, NewsService newsService) =>
+{
+    var result = await newsService.GetMarketNewsAsync(category ?? "general");
+    return Results.Ok(result);
+})
+.WithName("GetMarketNews")
+.WithOpenApi()
+.Produces<NewsResult>(StatusCodes.Status200OK);
+
 // Add request logging
 app.UseSerilogRequestLogging(options =>
 {

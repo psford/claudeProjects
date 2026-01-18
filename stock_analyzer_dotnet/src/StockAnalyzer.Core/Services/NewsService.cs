@@ -84,6 +84,68 @@ public class NewsService
     }
 
     /// <summary>
+    /// Get general market news (not stock-specific).
+    /// Uses Finnhub's /news endpoint for broad market coverage.
+    /// </summary>
+    /// <param name="category">Category: general, forex, crypto, merger</param>
+    /// <param name="minId">Minimum news ID for pagination</param>
+    public async Task<NewsResult> GetMarketNewsAsync(string category = "general", int? minId = null)
+    {
+        var validCategories = new[] { "general", "forex", "crypto", "merger" };
+        if (!validCategories.Contains(category.ToLower()))
+        {
+            category = "general";
+        }
+
+        var url = $"{BaseUrl}/news?category={category.ToLower()}&token={_apiKey}";
+        if (minId.HasValue)
+        {
+            url += $"&minId={minId}";
+        }
+
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<List<FinnhubNewsItem>>(url);
+
+            var articles = (response ?? new List<FinnhubNewsItem>())
+                .Select(item => new NewsItem
+                {
+                    Headline = item.Headline ?? "",
+                    Summary = item.Summary,
+                    Source = item.Source ?? "Unknown",
+                    PublishedAt = DateTimeOffset.FromUnixTimeSeconds(item.Datetime).DateTime,
+                    Url = item.Url,
+                    ImageUrl = item.Image,
+                    Category = item.Category ?? category,
+                    RelatedSymbols = !string.IsNullOrEmpty(item.Related)
+                        ? item.Related.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList()
+                        : new List<string>()
+                })
+                .OrderByDescending(a => a.PublishedAt)
+                .Take(20)
+                .ToList();
+
+            return new NewsResult
+            {
+                Symbol = "MARKET",
+                FromDate = DateTime.Now.AddDays(-7),
+                ToDate = DateTime.Now,
+                Articles = articles
+            };
+        }
+        catch (Exception)
+        {
+            return new NewsResult
+            {
+                Symbol = "MARKET",
+                FromDate = DateTime.Now.AddDays(-7),
+                ToDate = DateTime.Now,
+                Articles = new List<NewsItem>()
+            };
+        }
+    }
+
+    /// <summary>
     /// Get company profile including identifiers (ISIN, CUSIP) from Finnhub.
     /// </summary>
     public async Task<CompanyProfile?> GetCompanyProfileAsync(string symbol)
