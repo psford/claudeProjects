@@ -132,6 +132,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Separate project repos | Extract stock-analyzer to its own git repo with main claudeProjects using git submodules for isolation and independent versioning | Future |
 | Staging environment | Azure App Service deployment slot or separate app for pre-prod testing | Planned |
 | VNet + Private Endpoint | Deploy App Service into VNet with SQL private endpoint for enhanced security | Planned |
 | Application Insights | Azure Application Insights for error tracking and APM | Planned |
@@ -164,6 +165,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/19/2026 | Folder reorganization: moved stock_analyzer_dotnet → projects/stock-analyzer, project-specific workflows to project folder, added separate repos option to backlog |
 | 01/19/2026 | **v2.6** - Multi-source news (Finnhub + Marketaux), ML headline relevance scoring, Jaccard deduplication, image quality control (50% confidence, 20% min size), 52 new unit tests |
 | 01/19/2026 | **v2.5** - Security hardening (CORS, HSTS, input validation) |
 | 01/19/2026 | **v2.4** - App Service B1 migration, Azure Key Vault, zero-downtime deploys |
