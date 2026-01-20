@@ -5,12 +5,12 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'projects/stock-analyzer/**'
-      - 'projects/stock-analyzer/.github/workflows/dotnet-ci.yml'
+      - '.github/workflows/dotnet-ci.yml'
   pull_request:
     branches: [ master, main, develop ]
     paths:
       - 'projects/stock-analyzer/**'
-      - 'projects/stock-analyzer/.github/workflows/dotnet-ci.yml'
+      - '.github/workflows/dotnet-ci.yml'
   workflow_dispatch:  # Allow manual trigger
 
 env:
@@ -100,7 +100,7 @@ jobs:
       id: depcheck
       with:
         project: 'StockAnalyzer'
-        path: 'stock_analyzer_dotnet'
+        path: 'projects/stock-analyzer'
         format: 'HTML'
         args: >
           --failOnCVSS 7
