@@ -733,6 +733,65 @@ app.MapGet("/api/admin/prices/status", async (IServiceProvider serviceProvider) 
 .WithOpenApi()
 .Produces(StatusCodes.Status200OK);
 
+// GET /api/admin/prices/test-eodhd - Test EODHD API connectivity (debug endpoint)
+app.MapGet("/api/admin/prices/test-eodhd", async (IServiceProvider serviceProvider, IConfiguration config, string? date) =>
+{
+    var eodhd = serviceProvider.GetService<EodhdService>();
+    if (eodhd == null)
+        return Results.Ok(new { error = "EodhdService not registered" });
+
+    // Check what API key sources are available
+    var keyFromConfig1 = config["Eodhd:ApiKey"];
+    var keyFromConfig2 = config["EodhdApiKey"];
+    var keyFromEnv = Environment.GetEnvironmentVariable("EODHD_API_KEY");
+
+    if (!eodhd.IsAvailable)
+        return Results.Ok(new
+        {
+            error = "EODHD API key not configured",
+            isAvailable = false,
+            keySourcesChecked = new
+            {
+                eodhdApiKey = !string.IsNullOrEmpty(keyFromConfig1) ? "present" : "missing",
+                eodhdApiKeyAlt = !string.IsNullOrEmpty(keyFromConfig2) ? "present" : "missing",
+                envVar = !string.IsNullOrEmpty(keyFromEnv) ? "present" : "missing"
+            }
+        });
+
+    var testDate = string.IsNullOrEmpty(date)
+        ? DateTime.Today.AddDays(-1)
+        : DateTime.Parse(date);
+
+    try
+    {
+        // Test raw HTTP call first
+        using var httpClient = new HttpClient();
+        var apiKey = keyFromConfig1 ?? keyFromConfig2 ?? keyFromEnv ?? "";
+        var testUrl = $"https://eodhd.com/api/eod-bulk-last-day/US?api_token={apiKey}&fmt=json&date={testDate:yyyy-MM-dd}&filter=extended";
+        var rawResponse = await httpClient.GetStringAsync(testUrl);
+        var rawLength = rawResponse.Length;
+        var rawSample = rawResponse.Length > 500 ? rawResponse.Substring(0, 500) : rawResponse;
+
+        // Test via service
+        var data = await eodhd.GetBulkEodDataAsync(testDate, "US", CancellationToken.None);
+        return Results.Ok(new
+        {
+            isAvailable = true,
+            testDate = testDate.ToString("yyyy-MM-dd"),
+            recordsReturned = data.Count,
+            rawResponseLength = rawLength,
+            rawResponseSample = rawSample,
+            sampleTickers = data.Take(5).Select(r => new { r.Code, r.Close, r.Date }).ToList()
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = ex.Message, stackTrace = ex.StackTrace });
+    }
+})
+.WithName("TestEodhd")
+.WithOpenApi();
+
 // POST /api/admin/prices/sync-securities - Sync SecurityMaster from Symbols table
 app.MapPost("/api/admin/prices/sync-securities", async (PriceRefreshService? refreshService) =>
 {
