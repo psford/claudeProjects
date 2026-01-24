@@ -756,6 +756,44 @@ app.MapPost("/api/admin/prices/sync-securities", async (PriceRefreshService? ref
 .Produces(StatusCodes.Status400BadRequest)
 .Produces(StatusCodes.Status500InternalServerError);
 
+// POST /api/admin/prices/sync-eodhd - Sync SecurityMaster from EODHD exchange symbols
+app.MapPost("/api/admin/prices/sync-eodhd", async (
+    PriceRefreshService? refreshService,
+    HttpRequest request) =>
+{
+    if (refreshService == null)
+        return Results.BadRequest(new { error = "Price refresh service not configured" });
+
+    var body = await request.ReadFromJsonAsync<EodhdSyncRequest>();
+    var exchange = body?.Exchange ?? "US";
+
+    try
+    {
+        var result = await refreshService.SyncSecurityMasterFromEodhdAsync(exchange);
+
+        if (!string.IsNullOrEmpty(result.ErrorMessage))
+            return Results.Problem(result.ErrorMessage);
+
+        return Results.Ok(new
+        {
+            message = $"EODHD sync complete for {exchange}",
+            exchange = result.Exchange,
+            totalSymbols = result.TotalSymbols,
+            securitiesUpserted = result.SecuritiesUpserted
+        });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "EODHD sync failed for {Exchange}", exchange);
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("SyncEodhd")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
 // POST /api/admin/prices/refresh-date - Refresh prices for a specific date
 app.MapPost("/api/admin/prices/refresh-date", async (
     PriceRefreshService? refreshService,
@@ -843,6 +881,36 @@ app.MapPost("/api/admin/prices/bulk-load", async (
 .Produces(StatusCodes.Status202Accepted)
 .Produces(StatusCodes.Status400BadRequest)
 .Produces(StatusCodes.Status500InternalServerError);
+
+// GET /api/admin/prices/coverage-dates - Get all distinct dates with price data in a range
+app.MapGet("/api/admin/prices/coverage-dates", async (
+    string? startDate,
+    string? endDate,
+    IServiceProvider serviceProvider) =>
+{
+    using var scope = serviceProvider.CreateScope();
+    var priceRepo = scope.ServiceProvider.GetService<IPriceRepository>();
+
+    if (priceRepo == null)
+        return Results.BadRequest(new { error = "Price repository not configured" });
+
+    // Default to last 2 years if not specified
+    var start = DateTime.TryParse(startDate, out var s) ? s : DateTime.Today.AddYears(-2);
+    var end = DateTime.TryParse(endDate, out var e) ? e : DateTime.Today;
+
+    var dates = await priceRepo.GetDistinctDatesAsync(start, end);
+    return Results.Ok(new
+    {
+        startDate = start.ToString("yyyy-MM-dd"),
+        endDate = end.ToString("yyyy-MM-dd"),
+        datesWithData = dates.Select(d => d.ToString("yyyy-MM-dd")).ToList(),
+        count = dates.Count
+    });
+})
+.WithName("GetCoverageDates")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest);
 
 // POST /api/admin/prices/load-tickers - Load historical data for specific tickers
 app.MapPost("/api/admin/prices/load-tickers", async (
