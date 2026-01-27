@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -1359,6 +1360,178 @@ app.MapPost("/api/admin/data/seed-tracked-securities", async (IServiceProvider s
 .Produces(StatusCodes.Status400BadRequest)
 .Produces(StatusCodes.Status500InternalServerError);
 
+// POST /api/admin/data/reset-tracked - Reset tracking and import S&P 500 tickers
+// This clears all existing tracking and sets up proper S&P 500 tracking
+app.MapPost("/api/admin/data/reset-tracked", async (IServiceProvider serviceProvider, ResetTrackedRequest request) =>
+{
+    using var scope = serviceProvider.CreateScope();
+    var context = scope.ServiceProvider.GetService<StockAnalyzerDbContext>();
+
+    if (context == null)
+        return Results.BadRequest(new { error = "Database context not configured" });
+
+    if (request.Tickers == null || request.Tickers.Count == 0)
+        return Results.BadRequest(new { error = "No tickers provided" });
+
+    try
+    {
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        int cleared = 0;
+        int reset = 0;
+        int matched = 0;
+        int tracked = 0;
+
+        // Step 1: Clear TrackedSecurities table
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "DELETE FROM data.TrackedSecurities; SELECT @@ROWCOUNT";
+            cmd.CommandTimeout = 60;
+            cleared = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+
+        // Step 2: Reset all IsTracked flags to 0
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "UPDATE data.SecurityMaster SET IsTracked = 0 WHERE IsTracked = 1; SELECT @@ROWCOUNT";
+            cmd.CommandTimeout = 60;
+            reset = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+
+        // Step 3: Clean ticker list (no SQL escaping needed - using parameters)
+        var cleanTickers = request.Tickers
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim().ToUpperInvariant())
+            .Distinct()
+            .ToList();
+
+        if (cleanTickers.Count == 0)
+            return Results.BadRequest(new { error = "No valid tickers provided" });
+
+        var source = request.Source ?? "S&P 500";
+        var priority = request.Priority ?? 1;
+
+        // Step 4: Insert tickers into temp table using parameterized batches
+        // Using temp table approach for large ticker lists (S&P 500 has ~500)
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "CREATE TABLE #ImportTickers (Ticker NVARCHAR(20) PRIMARY KEY)";
+            cmd.CommandTimeout = 30;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // Insert tickers in batches of 100 using parameterized queries
+        const int batchSize = 100;
+        for (int i = 0; i < cleanTickers.Count; i += batchSize)
+        {
+            var batch = cleanTickers.Skip(i).Take(batchSize).ToList();
+            using var cmd = (SqlCommand)connection.CreateCommand();
+
+            var paramNames = new List<string>();
+            for (int j = 0; j < batch.Count; j++)
+            {
+                var paramName = $"@t{j}";
+                paramNames.Add($"({paramName})");
+                cmd.Parameters.AddWithValue(paramName, batch[j]);
+            }
+
+            // paramNames contains only parameter placeholders (@t0, @t1, etc.) - safe
+#pragma warning disable CA2100
+            cmd.CommandText = $"INSERT INTO #ImportTickers (Ticker) VALUES {string.Join(",", paramNames)}";
+#pragma warning restore CA2100
+            cmd.CommandTimeout = 30;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // Step 5: Insert into TrackedSecurities from temp table (fully parameterized)
+        using (var cmd = (SqlCommand)connection.CreateCommand())
+        {
+            cmd.CommandText = @"
+                INSERT INTO data.TrackedSecurities (SecurityAlias, Source, Priority, Notes, AddedBy)
+                SELECT sm.SecurityAlias, @source, @priority, 'Imported via reset-tracked API', 'api'
+                FROM data.SecurityMaster sm
+                INNER JOIN #ImportTickers t ON sm.TickerSymbol = t.Ticker
+                WHERE sm.IsActive = 1
+                  AND NOT EXISTS (SELECT 1 FROM data.TrackedSecurities ts WHERE ts.SecurityAlias = sm.SecurityAlias);
+                SELECT @@ROWCOUNT";
+            cmd.Parameters.AddWithValue("@source", source);
+            cmd.Parameters.AddWithValue("@priority", priority);
+            cmd.CommandTimeout = 60;
+            matched = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+
+        // Step 6: Update IsTracked flag on SecurityMaster
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = @"
+                UPDATE sm
+                SET IsTracked = 1
+                FROM data.SecurityMaster sm
+                WHERE EXISTS (SELECT 1 FROM data.TrackedSecurities ts WHERE ts.SecurityAlias = sm.SecurityAlias)
+                  AND sm.IsTracked = 0;
+                SELECT @@ROWCOUNT";
+            cmd.CommandTimeout = 60;
+            tracked = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+
+        // Step 7: Get list of tickers that weren't found (using temp table)
+        var notFound = new List<string>();
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT t.Ticker
+                FROM #ImportTickers t
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM data.SecurityMaster sm
+                    WHERE sm.TickerSymbol = t.Ticker AND sm.IsActive = 1
+                )";
+            cmd.CommandTimeout = 30;
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                notFound.Add(reader.GetString(0));
+            }
+        }
+
+        // Cleanup temp table
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "DROP TABLE #ImportTickers";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        Log.Information("Reset tracked securities: cleared {Cleared}, reset {Reset}, matched {Matched}, tracked {Tracked}",
+            cleared, reset, matched, tracked);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = $"Tracking reset. {matched} securities now tracked as '{source}'",
+            details = new
+            {
+                trackedSecuritiesCleared = cleared,
+                isTrackedFlagsReset = reset,
+                tickersProvided = cleanTickers.Count,
+                tickersMatched = matched,
+                isTrackedFlagsSet = tracked,
+                tickersNotFound = notFound.Count,
+                notFoundTickers = notFound.Take(20).ToList() // Show first 20
+            }
+        });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Reset tracked securities failed");
+        return Results.Problem($"Reset failed: {ex.Message}");
+    }
+})
+.WithName("ResetTrackedSecurities")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status500InternalServerError);
+
 // GET /api/admin/data/prices/monitor - Rich monitoring stats for crawler display
 // Uses efficient SQL queries instead of EF LINQ to avoid full table scans
 app.MapGet("/api/admin/data/prices/monitor", async (IServiceProvider serviceProvider) =>
@@ -1547,6 +1720,8 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
         // This query has two parts via UNION:
         // 1. Securities WITH prices that have internal gaps
         // 2. Securities WITHOUT any prices (need initial load) - only when includeUntracked=1
+        // Updated query: For untracked securities, prioritize Common Stock and shorter tickers
+        // This ensures we backfill widely-traded stocks (NYSE/NASDAQ) before OTC/Pink Sheets
         cmd.CommandText = @"
             WITH SecurityDateRange AS (
                 -- Part 1: Securities that HAVE prices - check for internal gaps
@@ -1554,6 +1729,7 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
                     sm.SecurityAlias,
                     sm.TickerSymbol,
                     sm.IsTracked,
+                    sm.SecurityType,
                     COALESCE(ts.Priority, 999) AS Priority,
                     MIN(p.EffectiveDate) AS FirstDate,
                     MAX(p.EffectiveDate) AS LastDate,
@@ -1564,13 +1740,14 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
                 WHERE sm.IsActive = 1
                   AND sm.IsEodhdUnavailable = 0
                   AND (sm.IsTracked = 1 OR @includeUntracked = 1)
-                GROUP BY sm.SecurityAlias, sm.TickerSymbol, sm.IsTracked, ts.Priority
+                GROUP BY sm.SecurityAlias, sm.TickerSymbol, sm.IsTracked, sm.SecurityType, ts.Priority
             ),
             ExpectedCounts AS (
                 SELECT
                     sdr.SecurityAlias,
                     sdr.TickerSymbol,
                     sdr.IsTracked,
+                    sdr.SecurityType,
                     sdr.Priority,
                     sdr.FirstDate,
                     sdr.LastDate,
@@ -1586,6 +1763,7 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
                     SecurityAlias,
                     TickerSymbol,
                     IsTracked,
+                    SecurityType,
                     Priority,
                     FirstDate,
                     LastDate,
@@ -1602,6 +1780,7 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
                     sm.SecurityAlias,
                     sm.TickerSymbol,
                     sm.IsTracked,
+                    sm.SecurityType,
                     COALESCE(ts.Priority, 999) AS Priority,
                     DATEADD(YEAR, -2, GETDATE()) AS FirstDate,
                     CAST(GETDATE() AS DATE) AS LastDate,
@@ -1637,7 +1816,13 @@ app.MapGet("/api/admin/prices/gaps", async (IServiceProvider serviceProvider, st
                 ExpectedPriceCount,
                 MissingDays
             FROM AllGaps
-            ORDER BY IsTracked DESC, Priority, MissingDays DESC, TickerSymbol";
+            ORDER BY
+                IsTracked DESC,                                    -- Tracked first
+                Priority,                                          -- Then by priority
+                CASE WHEN SecurityType = 'Common Stock' THEN 0 ELSE 1 END, -- Common Stock before others
+                LEN(TickerSymbol),                                 -- Shorter tickers first (likely NYSE/NASDAQ)
+                MissingDays DESC,                                  -- Then most gaps
+                TickerSymbol";
 
         var limitParam = cmd.CreateParameter();
         limitParam.ParameterName = "@limit";
@@ -2549,4 +2734,12 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// Request models for admin endpoints
+public class ResetTrackedRequest
+{
+    public List<string> Tickers { get; set; } = new();
+    public string? Source { get; set; }
+    public int? Priority { get; set; }
 }
