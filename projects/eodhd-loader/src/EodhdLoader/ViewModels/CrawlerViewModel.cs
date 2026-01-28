@@ -125,9 +125,19 @@ public partial class CrawlerViewModel : ViewModelBase
     // Track consecutive dates with no data returned for detecting unavailable securities
     private int _consecutiveNoDataCount;
     private const int NoDataThreshold = 10; // Mark as unavailable after 10 consecutive dates with no data (accounts for extended closures like 9/11)
+    private int _lastNoDataAlias; // Track which security the no-data counter applies to
+    // Track records loaded per security to detect zero-result completions
+    private int _recordsForCurrentSecurity;
+    // Securities that completed all their dates with 0 records loaded this session —
+    // skip them on subsequent gap refreshes to prevent infinite loops.
+    private readonly HashSet<int> _zeroResultAliases = new();
     // Track records loaded since last full heatmap refresh
     private int _recordsSinceHeatmapRefresh;
     private const int HeatmapFullRefreshInterval = 100; // Full re-fetch every N records
+    // Re-entrancy guard: DispatcherTimer fires every 1.2s regardless of whether the previous
+    // async handler completed. Without this guard, concurrent ProcessNextAsync calls cause
+    // race conditions on _currentSecurity, _dateQueue, and _securityQueue.
+    private bool _isProcessing;
 
     public CrawlerViewModel(StockAnalyzerApiClient apiClient)
     {
@@ -194,9 +204,9 @@ public partial class CrawlerViewModel : ViewModelBase
     /// Callers MUST check the return value — an empty queue after false means
     /// "query failed", NOT "no gaps exist."
     /// </summary>
-    private async Task<bool> RefreshGapsAsync()
+    private async Task<bool> RefreshGapsAsync(int? limitOverride = null)
     {
-        var gaps = await _apiClient.GetPriceGapsAsync("US", SecuritiesToFetch, _cts?.Token ?? default);
+        var gaps = await _apiClient.GetPriceGapsAsync("US", limitOverride ?? SecuritiesToFetch, _cts?.Token ?? default);
         if (gaps.Success)
         {
             TotalSecurities = gaps.Summary.TotalSecurities;
@@ -237,7 +247,7 @@ public partial class CrawlerViewModel : ViewModelBase
         CurrentAction = "Promoting untracked securities...";
         AddActivity("↑", "Promote", "Promoting next batch of untracked securities...");
 
-        var result = await _apiClient.PromoteUntrackedAsync(100, _cts?.Token ?? default);
+        var result = await _apiClient.PromoteUntrackedAsync(500, _cts?.Token ?? default);
 
         if (!result.Success)
         {
@@ -267,6 +277,7 @@ public partial class CrawlerViewModel : ViewModelBase
         SecuritiesProcessedThisSession = 0;
         RecordsLoadedThisSession = 0;
         ErrorsThisSession = 0;
+        _zeroResultAliases.Clear();
 
         CurrentPhase = "Crawling";
         CurrentAction = "Starting...";
@@ -286,13 +297,20 @@ public partial class CrawlerViewModel : ViewModelBase
         {
             // No tracked gaps — try promoting untracked securities
             var promoted = await PromoteAndRefreshAsync();
-            if (!promoted || _securityQueue.Count == 0)
+            if (promoted && _securityQueue.Count > 0)
             {
-                CurrentAction = "Complete!";
-                StatusText = "No gaps found. All securities have complete price data!";
-                IsCrawling = false;
+                _crawlTimer.Start();
+                CurrentAction = "Crawling";
+                StatusText = $"Promoted new batch. Crawling: {_securityQueue.Count} securities queued";
                 return;
             }
+
+            CurrentAction = "Complete!";
+            CurrentPhase = "Complete";
+            StatusText = "All securities processed! No gaps remain.";
+            AddActivity("✓", "Complete", "All securities processed (or marked unavailable)");
+            IsCrawling = false;
+            return;
         }
 
         // Start the paced timer
@@ -317,14 +335,21 @@ public partial class CrawlerViewModel : ViewModelBase
 
     private async Task ProcessNextAsync()
     {
-        if (_cts?.Token.IsCancellationRequested == true)
-        {
-            _crawlTimer.Stop();
-            return;
-        }
+        // Re-entrancy guard: DispatcherTimer fires every 1.2s regardless of whether the
+        // previous async handler completed. Without this, concurrent calls cause race
+        // conditions on _currentSecurity/_dateQueue AND can hammer the database with
+        // parallel gap queries, causing DTU exhaustion (HTTP 500).
+        if (_isProcessing) return;
+        _isProcessing = true;
 
         try
         {
+            if (_cts?.Token.IsCancellationRequested == true)
+            {
+                _crawlTimer.Stop();
+                return;
+            }
+
             // If we have dates queued for current security, process next date
             if (_dateQueue.Count > 0 && _currentSecurity != null)
             {
@@ -348,68 +373,167 @@ public partial class CrawlerViewModel : ViewModelBase
 
                 if (_securityQueue.Count == 0)
                 {
-                    // No tracked gaps remain — try promoting a batch of untracked
+                    // All tracked gaps filled — promote untracked securities and continue
                     var promoted = await PromoteAndRefreshAsync();
-
-                    if (!promoted || _securityQueue.Count == 0)
+                    if (promoted && _securityQueue.Count > 0)
                     {
-                        // Nothing left to promote or promote returned empty — we're done
-                        _crawlTimer.Stop();
-                        IsCrawling = false;
-                        CurrentAction = "Complete!";
-                        CurrentPhase = "Complete";
-                        StatusText = $"All gaps filled! Processed {SecuritiesProcessedThisSession} securities, loaded {RecordsLoadedThisSession:N0} records.";
-                        AddActivity("✓", "Complete", "All tracked securities complete, no more to promote");
+                        StatusText = $"Promoted new batch. {_securityQueue.Count} securities queued. {SecuritiesProcessedThisSession} processed so far.";
                         return;
                     }
 
-                    StatusText = $"Crawling: {_securityQueue.Count} securities queued";
+                    // Nothing left to promote — truly done
+                    _crawlTimer.Stop();
+                    IsCrawling = false;
+                    CurrentAction = "Complete!";
+                    CurrentPhase = "Complete";
+                    StatusText = $"All securities processed! {SecuritiesProcessedThisSession} securities, {RecordsLoadedThisSession:N0} records.";
+                    AddActivity("✓", "Complete", "All tracked and untracked securities processed");
                     return;
                 }
             }
 
-            // Get next security
-            _currentSecurity = _securityQueue.Dequeue();
-            CurrentTicker = _currentSecurity.Ticker;
-
-            CurrentAction = $"Analyzing {_currentSecurity.Ticker}...";
-
-            // Fetch the specific missing dates for this security
-            var secGaps = await _apiClient.GetSecurityGapsAsync(_currentSecurity.SecurityAlias, 100, _cts?.Token ?? default);
-            if (secGaps.Success && secGaps.MissingDates.Count > 0)
+            // Get next security — skip any that already completed with 0 records this session
+            SecurityGapInfo? nextSecurity = null;
+            while (_securityQueue.Count > 0)
             {
-                _dateQueue.Clear();
-                foreach (var date in secGaps.MissingDates)
+                var candidate = _securityQueue.Dequeue();
+                if (_zeroResultAliases.Contains(candidate.SecurityAlias))
                 {
-                    _dateQueue.Enqueue(date);
+                    // Already tried this security, got 0 records — skip it
+                    continue;
+                }
+                nextSecurity = candidate;
+                break;
+            }
+
+            if (nextSecurity == null)
+            {
+                // All securities in the current batch were in the skip set.
+                // Before promoting, check if there are actionable tracked gaps beyond
+                // what the SecuritiesToFetch limit returned. Only promote when ALL
+                // tracked securities have 100% coverage or are in the skip set.
+                if (SecuritiesWithGaps > _zeroResultAliases.Count)
+                {
+                    // There are tracked securities with gaps we haven't tried yet.
+                    // Fetch a larger batch to find them past the skipped ones.
+                    var expandedLimit = _zeroResultAliases.Count + SecuritiesToFetch;
+                    AddActivity("🔄", "Refresh", $"Skipped {_zeroResultAliases.Count} zero-result securities, searching for remaining {SecuritiesWithGaps - _zeroResultAliases.Count} with gaps...");
+                    var largerOk = await RefreshGapsAsync(expandedLimit);
+                    if (largerOk && _securityQueue.Count > 0)
+                    {
+                        // Found more securities to process. Next tick will dequeue them.
+                        return;
+                    }
                 }
 
-                AddActivity("📊", _currentSecurity.Ticker, $"{secGaps.MissingCount} missing dates ({secGaps.FirstDate} - {secGaps.LastDate})");
-                StatusText = $"Crawling: {_currentSecurity.Ticker} - {_dateQueue.Count} dates to load";
-                _consecutiveNoDataCount = 0;
+                // All tracked gaps are either filled or in the skip set.
+                // Try promoting untracked securities before stopping.
+                var promoted = await PromoteAndRefreshAsync();
+                if (promoted && _securityQueue.Count > 0)
+                {
+                    _zeroResultAliases.Clear(); // New batch = new securities to try
+                    StatusText = $"Promoted new batch. {_securityQueue.Count} securities queued. {SecuritiesProcessedThisSession} processed so far.";
+                    return;
+                }
+
+                // Nothing left to promote — truly done
+                _crawlTimer.Stop();
+                IsCrawling = false;
+                CurrentAction = "Complete!";
+                CurrentPhase = "Complete";
+                StatusText = $"All securities processed! {SecuritiesProcessedThisSession} securities, {RecordsLoadedThisSession:N0} records.";
+                AddActivity("✓", "Complete", "All tracked and untracked securities processed");
+                return;
             }
-            else
+
+            _currentSecurity = nextSecurity;
+            CurrentTicker = _currentSecurity.Ticker;
+            CurrentAction = $"Loading full history for {_currentSecurity.Ticker}...";
+
+            // Set heatmap active cell for ripple animation
+            ActiveHeatmapScore = _currentSecurity.ImportanceScore;
+            ActiveHeatmapYear = DateTime.Today.Year;
+
+            AddActivity("📊", _currentSecurity.Ticker, "Loading full price history...");
+            StatusText = $"Loading full history for {_currentSecurity.Ticker}...";
+
+            try
             {
-                // No gaps for this security (maybe already filled)
-                SecuritiesProcessedThisSession++;
-                _currentSecurity = null;
+                // Single EODHD API call: fetch ALL available history (1980-today)
+                // Server-side BulkInsertAsync deduplicates against existing records
+                var result = await _apiClient.LoadTickersAsync(
+                    [_currentSecurity.Ticker],
+                    new DateTime(1980, 1, 1),
+                    DateTime.Today,
+                    _cts?.Token ?? default);
+
+                if (result.Success && result.Data != null)
+                {
+                    var inserted = result.Data.RecordsInserted;
+                    RecordsLoadedThisSession += inserted;
+                    SecuritiesProcessedThisSession++;
+
+                    if (inserted > 0)
+                    {
+                        AddActivity("✓", _currentSecurity.Ticker, $"{inserted:N0} records loaded");
+                        _ = RefreshHeatmapFromApiAsync();
+                    }
+                    else
+                    {
+                        // 0 records: either no EODHD data or all data already existed
+                        if (result.Data.Errors?.Count > 0 &&
+                            result.Data.Errors.Any(e => e.Contains("No data returned", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            _zeroResultAliases.Add(_currentSecurity.SecurityAlias);
+                            await MarkSecurityUnavailableAsync(_currentSecurity);
+                            return; // MarkSecurityUnavailableAsync handles state cleanup
+                        }
+                        else
+                        {
+                            AddActivity("✓", _currentSecurity.Ticker, "Already complete");
+                        }
+                    }
+
+                    SecuritiesWithGaps = Math.Max(0, SecuritiesWithGaps - 1);
+                    CompletionPercent = TotalSecurities > 0
+                        ? Math.Round((TotalSecurities - SecuritiesWithGaps) * 100.0 / TotalSecurities, 1)
+                        : 100;
+                }
+                else
+                {
+                    ErrorsThisSession++;
+                    AddActivity("✗", _currentSecurity.Ticker, result.Error ?? "Load failed");
+                }
             }
+            catch (Exception ex)
+            {
+                ErrorsThisSession++;
+                AddActivity("✗", _currentSecurity.Ticker, $"Error: {ex.Message}");
+            }
+
+            _currentSecurity = null;
         }
         catch (Exception ex)
         {
             ErrorsThisSession++;
             AddActivity("✗", "Error", $"Crawler error: {ex.Message}");
             StatusText = $"Error: {ex.Message}";
-            // Don't stop crawling on error - try to continue with next item
+        }
+        finally
+        {
+            _isProcessing = false;
         }
     }
 
     private async Task ProcessNextDateAsync()
     {
-        if (_currentSecurity == null || _dateQueue.Count == 0) return;
+        // Capture to local variable — _currentSecurity is a shared field that could be
+        // mutated by concurrent timer ticks (even with re-entrancy guard, defensive coding).
+        var security = _currentSecurity;
+        if (security == null || _dateQueue.Count == 0) return;
 
         var dateStr = _dateQueue.Dequeue();
-        CurrentAction = $"Loading {_currentSecurity.Ticker} {dateStr}";
+        CurrentAction = $"Loading {security.Ticker} {dateStr}";
 
         try
         {
@@ -418,9 +542,9 @@ public partial class CrawlerViewModel : ViewModelBase
             {
                 // Update active heatmap cell for pulsing indicator
                 ActiveHeatmapYear = date.Year;
-                ActiveHeatmapScore = _currentSecurity.ImportanceScore;
+                ActiveHeatmapScore = security.ImportanceScore;
                 var result = await _apiClient.LoadTickersAsync(
-                    [_currentSecurity.Ticker],
+                    [security.Ticker],
                     date,
                     date,
                     _cts?.Token ?? default);
@@ -428,16 +552,17 @@ public partial class CrawlerViewModel : ViewModelBase
                 if (result.Success && result.Data != null)
                 {
                     RecordsLoadedThisSession += result.Data.RecordsInserted;
+                    _recordsForCurrentSecurity += result.Data.RecordsInserted;
 
                     if (result.Data.RecordsInserted > 0)
                     {
-                        AddActivity("✓", $"{_currentSecurity.Ticker} {dateStr}", $"{result.Data.RecordsInserted} records");
+                        AddActivity("✓", $"{security.Ticker} {dateStr}", $"{result.Data.RecordsInserted} records");
                         // Reset no-data counter since we got data
                         _consecutiveNoDataCount = 0;
 
                         // Live-update heatmap cell (pulse timer re-renders at 30fps)
-                        UpdateHeatmapCellLocally(date.Year, _currentSecurity.ImportanceScore,
-                            result.Data.RecordsInserted, _currentSecurity.IsTracked);
+                        UpdateHeatmapCellLocally(date.Year, security.ImportanceScore,
+                            result.Data.RecordsInserted, security.IsTracked);
                     }
                     else
                     {
@@ -447,7 +572,7 @@ public partial class CrawlerViewModel : ViewModelBase
                         if (_consecutiveNoDataCount >= NoDataThreshold)
                         {
                             // Mark this security as EODHD unavailable and move on
-                            await MarkSecurityUnavailableAsync(_currentSecurity);
+                            await MarkSecurityUnavailableAsync(security);
                             return;
                         }
                     }
@@ -457,28 +582,39 @@ public partial class CrawlerViewModel : ViewModelBase
                     // Update completion
                     if (_dateQueue.Count == 0)
                     {
-                        // Done with this security
-                        SecuritiesProcessedThisSession++;
-                        SecuritiesWithGaps = Math.Max(0, SecuritiesWithGaps - 1);
-                        CompletionPercent = TotalSecurities > 0
-                            ? Math.Round((TotalSecurities - SecuritiesWithGaps) * 100.0 / TotalSecurities, 1)
-                            : 100;
-                        _currentSecurity = null;
+                        if (_recordsForCurrentSecurity == 0)
+                        {
+                            // EODHD returned 0 records for ALL dates. Mark permanently
+                            // unavailable so it never appears in gap queries again.
+                            _zeroResultAliases.Add(security.SecurityAlias);
+                            await MarkSecurityUnavailableAsync(security);
+                            // MarkSecurityUnavailableAsync handles all state updates
+                        }
+                        else
+                        {
+                            // Done with this security (loaded some records)
+                            SecuritiesProcessedThisSession++;
+                            SecuritiesWithGaps = Math.Max(0, SecuritiesWithGaps - 1);
+                            CompletionPercent = TotalSecurities > 0
+                                ? Math.Round((TotalSecurities - SecuritiesWithGaps) * 100.0 / TotalSecurities, 1)
+                                : 100;
+                            _currentSecurity = null;
+                        }
                     }
 
-                    StatusText = $"Loaded {_currentSecurity?.Ticker ?? "?"} {dateStr}. {_dateQueue.Count} dates remaining for this security.";
+                    StatusText = $"Loaded {security.Ticker} {dateStr}. {_dateQueue.Count} dates remaining for this security.";
                 }
                 else
                 {
                     ErrorsThisSession++;
-                    AddActivity("✗", $"{_currentSecurity.Ticker} {dateStr}", result.Error ?? "Failed");
+                    AddActivity("✗", $"{security.Ticker} {dateStr}", result.Error ?? "Failed");
                 }
             }
         }
         catch (Exception ex)
         {
             ErrorsThisSession++;
-            AddActivity("✗", $"{_currentSecurity?.Ticker ?? "?"} {dateStr}", ex.Message);
+            AddActivity("✗", $"{security.Ticker} {dateStr}", ex.Message);
         }
     }
 
@@ -540,7 +676,7 @@ public partial class CrawlerViewModel : ViewModelBase
     {
         var trackedLabel = security.IsTracked ? "[T]" : "[U]";
         AddActivity("⚠️", $"{trackedLabel} {security.Ticker}", $"No EODHD data - marking as unavailable");
-        StatusText = $"Marking {security.Ticker} as EODHD unavailable (no data after {NoDataThreshold} dates)...";
+        StatusText = $"Marking {security.Ticker} as EODHD unavailable...";
 
         try
         {

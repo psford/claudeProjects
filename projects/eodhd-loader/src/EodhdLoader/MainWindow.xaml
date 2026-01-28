@@ -16,23 +16,21 @@
         <local:EnvironmentConverter x:Key="EnvironmentConverter"/>
     </Window.Resources>
 
-    <Grid>
-        <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="🕷️ Boris">
-                <views:BorisView DataContext="{Binding Boris}"/>
-            </TabItem>
-            <TabItem Header="🕸️ Crawler">
-                <views:CrawlerView DataContext="{Binding Crawler}"/>
-            </TabItem>
-            <TabItem Header="📦 Bulk Fill">
-                <views:BulkFillView DataContext="{Binding BulkFill}"/>
-            </TabItem>
-            <TabItem Header="Index Manager">
-                <views:IndexManagerView DataContext="{Binding IndexManager}"/>
-            </TabItem>
-            <TabItem Header="Dashboard">
-                <views:DashboardView DataContext="{Binding Dashboard}"/>
-            </TabItem>
-        </TabControl>
-    </Grid>
+    <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+        <TabItem Header="🕷️ Boris">
+            <views:BorisView DataContext="{Binding Boris}"/>
+        </TabItem>
+        <TabItem Header="🕸️ Crawler">
+            <views:CrawlerView DataContext="{Binding Crawler}"/>
+        </TabItem>
+        <TabItem Header="📦 Bulk Fill">
+            <views:BulkFillView DataContext="{Binding BulkFill}"/>
+        </TabItem>
+        <TabItem Header="Index Manager">
+            <views:IndexManagerView DataContext="{Binding IndexManager}"/>
+        </TabItem>
+        <TabItem Header="Dashboard">
+            <views:DashboardView DataContext="{Binding Dashboard}"/>
+        </TabItem>
+    </TabControl>
 </Window>
