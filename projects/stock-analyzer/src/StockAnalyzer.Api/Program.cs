@@ -2161,6 +2161,131 @@ app.MapPost("/api/admin/prices/mark-eodhd-complete/{securityAlias}", async (ISer
 .Produces(StatusCodes.Status404NotFound)
 .Produces(StatusCodes.Status500InternalServerError);
 
+// POST /api/admin/prices/bulk-mark-eodhd-complete - Bulk mark securities as EODHD complete
+// Marks all tracked securities that have at least N price records as IsEodhdComplete = true.
+// Logic: if we've loaded N+ records for a security, we've done a full-history load. Any remaining
+// gaps are unfillable (EODHD doesn't have data for those dates). This avoids burning API calls
+// one-by-one through the crawler. Use minPriceCount to control aggressiveness (default: 50).
+app.MapPost("/api/admin/prices/bulk-mark-eodhd-complete", async (IServiceProvider serviceProvider, HttpContext httpContext) =>
+{
+    using var scope = serviceProvider.CreateScope();
+    var context = scope.ServiceProvider.GetService<StockAnalyzerDbContext>();
+
+    if (context == null)
+        return Results.BadRequest(new { error = "Database context not configured" });
+
+    try
+    {
+        // Parse optional minPriceCount parameter (default: 50)
+        var minPriceCount = 50;
+        if (httpContext.Request.Query.TryGetValue("minPriceCount", out var countStr) && int.TryParse(countStr, out var c))
+            minPriceCount = c;
+
+        // Preview mode: if dryRun=true, just return what would be marked
+        var dryRun = httpContext.Request.Query.ContainsKey("dryRun");
+
+        var sql = @"
+            SELECT sm.SecurityAlias, sm.TickerSymbol, COUNT(p.SecurityAlias) AS PriceCount
+            FROM data.SecurityMaster sm
+            INNER JOIN data.Prices p ON p.SecurityAlias = sm.SecurityAlias
+            WHERE sm.IsTracked = 1
+              AND sm.IsEodhdComplete = 0
+              AND sm.IsEodhdUnavailable = 0
+            GROUP BY sm.SecurityAlias, sm.TickerSymbol
+            HAVING COUNT(p.SecurityAlias) >= @minPriceCount";
+
+        using var conn = context.Database.GetDbConnection();
+        await conn.OpenAsync();
+
+        // First, get the list of securities to mark
+        // CA2100: sql is a hardcoded constant string with parameterized @minPriceCount — no injection risk
+        using var cmd = conn.CreateCommand();
+#pragma warning disable CA2100
+        cmd.CommandText = sql;
+#pragma warning restore CA2100
+        var param = cmd.CreateParameter();
+        param.ParameterName = "@minPriceCount";
+        param.Value = minPriceCount;
+        cmd.Parameters.Add(param);
+
+        var candidates = new List<(int Alias, string Ticker, int Count)>();
+        using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                candidates.Add((reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2)));
+            }
+        }
+
+        if (dryRun)
+        {
+            return Results.Ok(new
+            {
+                success = true,
+                dryRun = true,
+                message = $"Would mark {candidates.Count} securities as EODHD complete (minPriceCount={minPriceCount})",
+                count = candidates.Count,
+                minPriceCount,
+                securities = candidates.Select(c => new { alias = c.Alias, ticker = c.Ticker, priceCount = c.Count })
+            });
+        }
+
+        if (candidates.Count == 0)
+        {
+            return Results.Ok(new
+            {
+                success = true,
+                message = "No securities matched criteria for bulk marking",
+                count = 0,
+                minPriceCount
+            });
+        }
+
+        // Bulk update using parameterized IN clause
+        var aliases = candidates.Select(c => c.Alias).ToList();
+        using var updateCmd = conn.CreateCommand();
+        var paramNames = new List<string>();
+        for (int i = 0; i < aliases.Count; i++)
+        {
+            var pName = $"@a{i}";
+            paramNames.Add(pName);
+            var p = updateCmd.CreateParameter();
+            p.ParameterName = pName;
+            p.Value = aliases[i];
+            updateCmd.Parameters.Add(p);
+        }
+#pragma warning disable CA2100 // Parameterized IN clause built from integer aliases — no injection risk
+        updateCmd.CommandText = $@"
+            UPDATE data.SecurityMaster
+            SET IsEodhdComplete = 1, UpdatedAt = GETUTCDATE()
+            WHERE SecurityAlias IN ({string.Join(",", paramNames)})";
+#pragma warning restore CA2100
+
+        var rowsAffected = await updateCmd.ExecuteNonQueryAsync();
+
+        Log.Information("Bulk marked {Count} securities as EODHD complete (minPriceCount={MinPriceCount})",
+            rowsAffected, minPriceCount);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = $"Marked {rowsAffected} securities as EODHD complete",
+            count = rowsAffected,
+            minPriceCount,
+            securities = candidates.Select(c => new { alias = c.Alias, ticker = c.Ticker, priceCount = c.Count })
+        });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to bulk mark securities as EODHD complete");
+        return Results.Problem(ex.Message);
+    }
+})
+.WithName("BulkMarkEodhdComplete")
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status500InternalServerError);
+
 // POST /api/admin/securities/reset-unavailable - Reset IsEodhdUnavailable flag for all or recently-marked securities
 // Use this to roll back incorrect unavailable markings (e.g., caused by future-date bug)
 app.MapPost("/api/admin/securities/reset-unavailable", async (IServiceProvider serviceProvider, HttpContext httpContext) =>
@@ -2496,8 +2621,9 @@ app.MapPost("/api/admin/securities/promote-untracked", async (IServiceProvider s
 .Produces(StatusCodes.Status500InternalServerError);
 
 // GET /api/admin/dashboard/stats - Consolidated dashboard stats for EODHD Loader
-// Result sets 1-3 use direct SQL (fast queries on SecurityMaster + indexed Prices).
-// Result sets 4-5 read from CoverageSummary table (instant, avoids full Prices scan).
+// Universe counts from SecurityMaster (small table, instant).
+// Price stats + tiers + coverage from CoverageSummary (pre-aggregated, instant).
+// NO direct queries on the 7M+ row Prices table — avoids DTU exhaustion on Azure SQL Basic.
 // All results cached for 10 minutes via IMemoryCache.
 app.MapGet("/api/admin/dashboard/stats", async (IServiceProvider serviceProvider, IMemoryCache cache) =>
 {
@@ -2516,10 +2642,9 @@ app.MapGet("/api/admin/dashboard/stats", async (IServiceProvider serviceProvider
         var connection = context.Database.GetDbConnection();
         await connection.OpenAsync();
 
-        // Result sets 1-3: Direct SQL (fast - SecurityMaster is small, Prices COUNT uses index)
+        // Query 1: Universe counts from SecurityMaster (small table, instant)
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
-            -- Universe counts
             SELECT
                 COUNT(*) AS TotalSecurities,
                 SUM(CASE WHEN IsTracked = 1 THEN 1 ELSE 0 END) AS Tracked,
@@ -2527,29 +2652,8 @@ app.MapGet("/api/admin/dashboard/stats", async (IServiceProvider serviceProvider
                 SUM(CASE WHEN IsEodhdUnavailable = 1 THEN 1 ELSE 0 END) AS Unavailable
             FROM data.SecurityMaster WITH (NOLOCK)
             WHERE IsActive = 1;
-
-            -- Price record counts
-            SELECT
-                COUNT(*) AS TotalRecords,
-                COUNT(DISTINCT SecurityAlias) AS DistinctSecurities,
-                MIN(EffectiveDate) AS OldestDate,
-                MAX(EffectiveDate) AS LatestDate
-            FROM data.Prices WITH (NOLOCK);
-
-            -- ImportanceScore tier distribution with completion status
-            SELECT
-                sm.ImportanceScore,
-                COUNT(*) AS Total,
-                SUM(CASE WHEN p.SecurityAlias IS NOT NULL THEN 1 ELSE 0 END) AS WithPrices,
-                SUM(CASE WHEN sm.IsEodhdUnavailable = 1 THEN 1 ELSE 0 END) AS Unavailable
-            FROM data.SecurityMaster sm WITH (NOLOCK)
-            LEFT JOIN (SELECT DISTINCT SecurityAlias FROM data.Prices WITH (NOLOCK)) p
-                ON p.SecurityAlias = sm.SecurityAlias
-            WHERE sm.IsActive = 1 AND sm.IsTracked = 0
-            GROUP BY sm.ImportanceScore
-            ORDER BY sm.ImportanceScore DESC;
         ";
-        cmd.CommandTimeout = 60;
+        cmd.CommandTimeout = 15;
 
         object? universeData = null;
         object? pricesData = null;
@@ -2557,7 +2661,6 @@ app.MapGet("/api/admin/dashboard/stats", async (IServiceProvider serviceProvider
 
         using var reader = await cmd.ExecuteReaderAsync();
 
-        // Result set 1: Universe counts
         if (await reader.ReadAsync())
         {
             universeData = new
@@ -2569,40 +2672,58 @@ app.MapGet("/api/admin/dashboard/stats", async (IServiceProvider serviceProvider
             };
         }
 
-        // Result set 2: Price records
-        if (await reader.NextResultAsync() && await reader.ReadAsync())
-        {
-            pricesData = new
-            {
-                totalRecords = reader.GetInt32(0),
-                distinctSecurities = reader.GetInt32(1),
-                oldestDate = reader.IsDBNull(2) ? null : reader.GetDateTime(2).ToString("yyyy-MM-dd"),
-                latestDate = reader.IsDBNull(3) ? null : reader.GetDateTime(3).ToString("yyyy-MM-dd")
-            };
-        }
-
-        // Result set 3: ImportanceScore tiers
-        if (await reader.NextResultAsync())
-        {
-            while (await reader.ReadAsync())
-            {
-                tiers.Add(new
-                {
-                    score = reader.GetInt32(0),
-                    total = reader.GetInt32(1),
-                    withPrices = reader.GetInt32(2),
-                    unavailable = reader.GetInt32(3)
-                });
-            }
-        }
-
-        // Close reader before querying CoverageSummary via EF (can't have two open readers)
         await reader.CloseAsync();
 
-        // Result sets 4-5: Read from CoverageSummary table (instant, avoids YEAR() full scan)
+        // All remaining data from CoverageSummary (pre-aggregated, instant — no Prices table scan)
         var summaryRows = await context.CoverageSummary
             .OrderByDescending(s => s.Year)
             .ToListAsync();
+
+        // Derive price stats from CoverageSummary (replaces expensive COUNT/MIN/MAX on 7M+ Prices)
+        if (summaryRows.Any())
+        {
+            var totalRecords = summaryRows.Sum(r => r.TrackedRecords + r.UntrackedRecords);
+            var distinctSecurities = summaryRows
+                .GroupBy(r => r.ImportanceScore)
+                .Sum(g => g.Max(r => r.TrackedSecurities + r.UntrackedSecurities));
+            var minYear = summaryRows.Min(r => r.Year);
+
+            // Fast latest date lookup — TOP 1 with index seek, avoids full table scan
+            string? latestDate = null;
+            using var dateCmd = connection.CreateCommand();
+            dateCmd.CommandText = "SELECT TOP 1 EffectiveDate FROM data.Prices WITH (NOLOCK) ORDER BY EffectiveDate DESC";
+            dateCmd.CommandTimeout = 5;
+            var latestObj = await dateCmd.ExecuteScalarAsync();
+            if (latestObj is DateTime dt)
+                latestDate = dt.ToString("yyyy-MM-dd");
+
+            pricesData = new
+            {
+                totalRecords = (int)Math.Min(totalRecords, int.MaxValue),
+                distinctSecurities,
+                oldestDate = $"{minYear}-01-01",
+                latestDate
+            };
+        }
+
+        // Derive importance tier distribution from CoverageSummary
+        // (replaces expensive LEFT JOIN with SELECT DISTINCT on Prices)
+        var tierGroups = summaryRows
+            .GroupBy(r => r.ImportanceScore)
+            .OrderByDescending(g => g.Key);
+
+        foreach (var g in tierGroups)
+        {
+            // Count securities with prices in this tier from CoverageSummary
+            var withPrices = g.Max(r => r.TrackedSecurities + r.UntrackedSecurities);
+            tiers.Add(new
+            {
+                score = g.Key,
+                total = withPrices,
+                withPrices,
+                unavailable = 0
+            });
+        }
 
         // Build decade coverage from summary
         var decades = summaryRows
