@@ -267,6 +267,8 @@ Page Load                    User Types Query
 | FR-006.5 | The system must display a company description/bio when available |
 | FR-006.6 | The system must truncate long descriptions at sentence boundaries |
 | FR-006.7 | The system must display the current price with day change |
+| FR-006.8 | The system must fall back to Wikipedia when financial APIs return no description or a description shorter than 150 characters |
+| FR-006.9 | The system must cache company descriptions in the database (`data.CompanyBio`) after first fetch, serving subsequent lookups from Azure SQL without external API calls |
 
 ### 3.7 Key Metrics (FR-007)
 
@@ -355,6 +357,8 @@ Page Load                    User Types Query
 | FR-011.21 | The Stochastic panel must show %K line (fast) and %D line (signal) |
 | FR-011.22 | The Stochastic panel must show overbought (80) and oversold (20) reference lines |
 | FR-011.23 | The system must use standard Stochastic parameters (K=14, D=3) by default |
+| FR-011.24 | Each indicator checkbox must display a hover tooltip explaining the indicator's purpose and key thresholds |
+| FR-011.25 | Moving average checkboxes (SMA 20/50/200) must also display hover tooltips |
 
 **User Story:** *As a technical trader, I want to see RSI, MACD, Bollinger Bands, and Stochastic Oscillator indicators so that I can identify overbought/oversold conditions, momentum trends, and volatility.*
 
