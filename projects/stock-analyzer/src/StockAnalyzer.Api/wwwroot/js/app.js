@@ -121,6 +121,7 @@ const App = {
      */
     init() {
         this.initDarkMode();
+        this.initMusicToggle();
         this.bindEvents();
         this.checkApiHealth();
         this.trackUserActivity();
@@ -397,45 +398,66 @@ const App = {
     },
 
     /**
-     * Initialize dark mode from localStorage preference
+     * Initialize theme system using JSON-based ThemeLoader
+     * Supports: 'light', 'dark', 'neon-noir', and any JSON theme
      */
-    initDarkMode() {
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        const sunIcon = document.getElementById('sun-icon');
-        const moonIcon = document.getElementById('moon-icon');
+    async initDarkMode() {
+        const themeBtn = document.getElementById('theme-toggle-btn');
+        const themeDropdown = document.getElementById('theme-dropdown');
+        const iconLight = document.getElementById('theme-icon-light');
+        const iconDark = document.getElementById('theme-icon-dark');
+        const iconNeon = document.getElementById('theme-icon-neon');
 
-        // Check for saved preference or system preference
-        const savedPreference = localStorage.getItem('darkMode');
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-        const isDark = savedPreference === 'true' || (savedPreference === null && systemPrefersDark);
-
-        // Apply initial state
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-            sunIcon.classList.remove('hidden');
-            moonIcon.classList.add('hidden');
-        } else {
-            document.documentElement.classList.remove('dark');
-            sunIcon.classList.add('hidden');
-            moonIcon.classList.remove('hidden');
+        // Initialize ThemeLoader (loads manifest, applies saved theme)
+        if (typeof ThemeLoader !== 'undefined') {
+            await ThemeLoader.init();
         }
 
-        // Toggle handler
-        darkModeToggle.addEventListener('click', () => {
-            const isDarkNow = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('darkMode', isDarkNow);
+        // Update icon based on current theme
+        const updateIcon = (themeId) => {
+            iconLight?.classList.add('hidden');
+            iconDark?.classList.add('hidden');
+            iconNeon?.classList.add('hidden');
 
-            if (isDarkNow) {
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
+            if (themeId === 'dark') {
+                iconDark?.classList.remove('hidden');
+            } else if (themeId === 'neon-noir') {
+                iconNeon?.classList.remove('hidden');
             } else {
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
+                iconLight?.classList.remove('hidden');
             }
+        };
 
-            // Update Plotly chart colors if chart exists
-            this.updateChartTheme();
+        // Set initial icon
+        const currentThemeId = ThemeLoader?.getCurrentThemeId() || 'light';
+        updateIcon(currentThemeId);
+
+        // Listen for theme changes from ThemeLoader
+        window.addEventListener('themechange', (e) => {
+            updateIcon(e.detail.themeId);
+        });
+
+        // Toggle dropdown on button click
+        themeBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            themeDropdown?.classList.toggle('hidden');
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', () => {
+            themeDropdown?.classList.add('hidden');
+        });
+
+        // Theme option click handlers
+        themeDropdown?.querySelectorAll('.theme-option').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const theme = btn.dataset.theme;
+                if (typeof ThemeLoader !== 'undefined') {
+                    await ThemeLoader.applyTheme(theme);
+                }
+                themeDropdown?.classList.add('hidden');
+            });
         });
     },
 
@@ -447,6 +469,52 @@ const App = {
         if (chartEl && chartEl.data) {
             this.renderChart();
         }
+    },
+
+    /**
+     * Initialize the vaporwave ambient music toggle
+     */
+    initMusicToggle() {
+        const musicBtn = document.getElementById('music-toggle');
+        const visualizer = musicBtn?.querySelector('.music-visualizer');
+
+        if (!musicBtn || typeof VaporwaveAudio === 'undefined') {
+            console.debug('Music toggle not initialized (button or VaporwaveAudio not found)');
+            return;
+        }
+
+        // Restore state from localStorage
+        const savedState = localStorage.getItem('musicEnabled') === 'true';
+
+        const updateUI = (playing) => {
+            if (playing) {
+                musicBtn.classList.add('active');
+                musicBtn.title = 'Toggle ambient music (on)';
+                visualizer?.classList.remove('hidden');
+            } else {
+                musicBtn.classList.remove('active');
+                musicBtn.title = 'Toggle ambient music (off)';
+                visualizer?.classList.add('hidden');
+            }
+        };
+
+        // Auto-start if previously enabled (requires user interaction first due to browser policy)
+        if (savedState) {
+            // We can't auto-start audio, but we can show the button as "ready to resume"
+            musicBtn.title = 'Click to resume ambient music';
+        }
+
+        musicBtn.addEventListener('click', () => {
+            if (VaporwaveAudio.isPlaying()) {
+                VaporwaveAudio.stop();
+                updateUI(false);
+                localStorage.setItem('musicEnabled', 'false');
+            } else {
+                VaporwaveAudio.start();
+                updateUI(true);
+                localStorage.setItem('musicEnabled', 'true');
+            }
+        });
     },
 
     /**
