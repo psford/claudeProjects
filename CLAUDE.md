@@ -21,6 +21,7 @@ Enforced by Claude Code hooks. Violations are blocked automatically.
 | **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual |
 | **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill → rebuild → relaunch. Zero effect until rebuilt. | **Hook reminds** |
 | **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify fix before reporting. | Manual |
+| **PRODUCT DECISIONS** | When Patrick makes a UX/product decision, implement it. Technical objections only for data loss, security, or irreversibility. Record in `docs/decisions.md`. | Manual |
 | **TEST BEFORE SUGGESTING** | NEVER tell user to do something without verifying it works. If you can't test, say so. | Manual |
 | **NO RESET --HARD** | NEVER run `git reset --hard`. Destroyed uncommitted Bloomberg terminal work. Use `git merge` or `git rebase` to sync branches. If uncommitted changes exist, `git stash` first. No exceptions. | **BLOCKED** |
 
@@ -161,6 +162,23 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 - **Azure CLI path:** `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'`
 - **Periodic cleanup:** orphaned Azure SQL databases, old container registry tags (keep latest + 5), local orphaned files, storage blobs
 
+### WSL2 Claude Code Sandbox
+
+WSL2 provides an isolated Linux environment for Claude Code. See `infrastructure/wsl/CLAUDE.md` for setup contracts.
+
+**Environment variables (set in `.env`, loaded by `pull-secrets.sh`):**
+
+| Variable | Purpose | Used by |
+|----------|---------|---------|
+| `WSL_SQL_CONNECTION` | TCP connection string to Windows SQL Express (`wsl_claude` login) | `Program.cs` in Stock Analyzer and Road Trip |
+| `SA_DESIGN_CONNECTION` | TCP connection string for EF Core migrations (`wsl_claude_admin` login, DDL permissions) | `DesignTimeDbContextFactory` in both projects |
+
+Both fall back to Windows defaults (appsettings / localdb) when unset, so Windows development is unaffected.
+
+**SQL logins:** `wsl_claude` (read/write, no DDL) and `wsl_claude_admin` (DDL for migrations). Created on Windows SQL Express for TCP access from WSL2.
+
+**Hooks:** `.claude/hooks/eodhd_rebuild_guard.py` detects WSL2 (`/proc/version`) and adjusts its message (cannot rebuild WPF app from Linux).
+
 ---
 
 ## Principles
@@ -196,13 +214,14 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 | **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
 | **Audit the class** | When a bug is found as "we forgot X in location Y," immediately search for every other location where X might also be missing. Don't fix one instance — fix the class. |
 | **Verify repo context** | Before writing files or committing to a repo other than the one open in the IDE, verify the target repo's current branch and confirm it's the correct destination. Don't let files end up in the wrong project. |
+| **Preserve original media** | Never degrade user-uploaded images/media. Store originals at full quality. Use resized/compressed versions for display performance (thumbnails, map previews), but always provide a way to view or download the original. |
 
 ---
 
 ## Session Protocol
 
 ### Starting ("hello!")
-1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`
+1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`, `docs/decisions.md`
 2. If WYA has tasks, ask about them. Complete one step at a time.
 
 ### During
@@ -276,6 +295,8 @@ Run agents in parallel when possible.
 | `TECHNICAL_SPEC.md` | Technical details (`projects/stock-analyzer/docs/`) |
 | `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
 | `projects/eodhd-loader/CLAUDE.md` | EODHD Loader domain contracts |
+| `projects/road-trip/CLAUDE.md` | Road Trip Photo Map domain contracts |
+| `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts |
 | `.env` | API keys — not committed |
 
 ---
