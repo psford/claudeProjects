@@ -88,7 +88,68 @@ def test_hook(hook_script, tool_name, tool_input, expect_decision, description):
         errors.append(f"ERROR: {description}: {e}")
 
 
+def test_post_hook(hook_script, tool_name, tool_input, expect_output_contains,
+                   description, expect_exit=0):
+    """Test a PostToolUse hook."""
+    global passed, failed, errors
+
+    hook_path = os.path.join(HOOKS_DIR, hook_script)
+    if not os.path.exists(hook_path):
+        print(f"  {YELLOW}SKIP{RESET} {description} -- hook not found: {hook_script}")
+        return
+
+    hook_input_data = {"tool_name": tool_name, "tool_input": tool_input}
+
+    try:
+        result = subprocess.run(
+            [sys.executable, hook_path],
+            input=json.dumps(hook_input_data),
+            capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+        )
+
+        additional_context = ""
+        if result.stdout.strip():
+            try:
+                parsed = json.loads(result.stdout.strip())
+                additional_context = parsed.get("hookSpecificOutput", {}).get("additionalContext", "")
+            except json.JSONDecodeError:
+                additional_context = result.stdout.strip()
+
+        exit_ok = (result.returncode == expect_exit)
+        if expect_output_contains is None:
+            content_ok = (additional_context == "")
+        else:
+            content_ok = (expect_output_contains.lower() in additional_context.lower())
+
+        if exit_ok and content_ok:
+            label = f"has '{expect_output_contains}'" if expect_output_contains else "silent"
+            print(f"  {GREEN}PASS{RESET} {description} (exit={result.returncode}, {label})")
+            passed += 1
+        else:
+            issues = []
+            if not exit_ok:
+                issues.append(f"exit={result.returncode} (expected {expect_exit})")
+            if not content_ok:
+                if expect_output_contains is None:
+                    issues.append(f"expected silent but got: {additional_context[:80]!r}")
+                else:
+                    issues.append(f"expected '{expect_output_contains}' in output")
+            msg = f"  {RED}FAIL{RESET} {description} -- " + "; ".join(issues)
+            print(msg)
+            failed += 1
+            errors.append(msg)
+    except subprocess.TimeoutExpired:
+        print(f"  {RED}FAIL{RESET} {description} -- timeout")
+        failed += 1
+        errors.append(f"TIMEOUT: {description}")
+    except Exception as e:
+        print(f"  {RED}FAIL{RESET} {description} -- {e}")
+        failed += 1
+        errors.append(f"ERROR: {description}: {e}")
+
+
 def main():
+    global passed, failed, errors
     print("=" * 60)
     print("HOOK VERIFICATION TEST SUITE")
     print("These tests verify hooks BLOCK what they should.")
@@ -454,6 +515,47 @@ def main():
         "allow",
         "ALLOW: Edit tool (not Bash)",
     )
+
+    # == eodhd_rebuild_guard.py (PostToolUse) ==
+    print("\n== eodhd_rebuild_guard.py (PostToolUse) ==")
+
+    test_post_hook("eodhd_rebuild_guard.py", "Bash",
+        {"command": "dotnet build"}, None,
+        "SILENT: dotnet build (not a git commit)")
+
+    test_post_hook("eodhd_rebuild_guard.py", "Read",
+        {"file_path": "projects/eodhd-loader/src/EodhdLoader/MainWindow.xaml"}, None,
+        "SILENT: Read tool (hook ignores non-Bash)")
+
+    # == is_wsl() unit test ==
+    print("\n== eodhd_rebuild_guard.py: is_wsl() detection ==")
+    try:
+        import importlib.util
+        wsl_path = os.path.join(HOOKS_DIR, "eodhd_rebuild_guard.py")
+        if os.path.exists(wsl_path):
+            spec = importlib.util.spec_from_file_location("eodhd_rebuild_guard", wsl_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            result_wsl = module.is_wsl()
+            print(f"  {GREEN}PASS{RESET} is_wsl() returns {result_wsl} (valid for current platform)")
+            passed += 1
+        else:
+            print(f"  {YELLOW}SKIP{RESET} eodhd_rebuild_guard.py not found")
+    except Exception as e:
+        print(f"  {RED}FAIL{RESET} is_wsl() unit test -- {e}")
+        failed += 1
+        errors.append(f"is_wsl() test: {e}")
+
+    # == spec_staleness_guard.py (PostToolUse) ==
+    print("\n== spec_staleness_guard.py (PostToolUse) ==")
+
+    test_post_hook("spec_staleness_guard.py", "Bash",
+        {"command": "dotnet build"}, None,
+        "SILENT: dotnet build (not a git push)")
+
+    test_post_hook("spec_staleness_guard.py", "Read",
+        {"file_path": "/some/file"}, None,
+        "SILENT: Read tool (hook ignores non-Bash)")
 
     # == Summary ==
     print("\n" + "=" * 60)
