@@ -148,6 +148,69 @@ def test_post_hook(hook_script, tool_name, tool_input, expect_output_contains,
         errors.append(f"ERROR: {description}: {e}")
 
 
+def test_hook_registration(repo_root, hooks_dir):
+    """Verify hooks in settings.local.json resolve to existing, non-placeholder files."""
+    global passed, failed, errors
+
+    settings_path = os.path.join(repo_root, ".claude", "settings.local.json")
+    if not os.path.exists(settings_path):
+        print(f"  {YELLOW}SKIP{RESET} hook registration -- settings.local.json not found")
+        return
+
+    with open(settings_path) as f:
+        settings = json.load(f)
+
+    hooks_section = settings.get("hooks", {})
+    registered_scripts = set()
+
+    for event_name, hook_groups in hooks_section.items():
+        for group in hook_groups:
+            for hook in group.get("hooks", []):
+                cmd = hook.get("command", "")
+                if not cmd:
+                    continue
+                parts = cmd.split()
+                for part in parts:
+                    if part in ("python", "python3", "bash", "sh") or part.startswith("-"):
+                        continue
+                    if part.endswith(".py") or part.endswith(".sh"):
+                        registered_scripts.add(os.path.basename(part))
+                        resolved = os.path.join(repo_root, part) if not os.path.isabs(part) else part
+                        if os.path.exists(resolved):
+                            print(f"  {GREEN}PASS{RESET} [{event_name}] {part} exists")
+                            passed += 1
+
+                            # Check for placeholder
+                            if resolved.endswith(".py"):
+                                with open(resolved, encoding="utf-8") as hf:
+                                    lines = hf.readlines()
+                                real = [l for l in lines if l.strip() and not l.strip().startswith("#")]
+                                if len(real) < 3:
+                                    msg = f"  {RED}FAIL{RESET} [{event_name}] {part} is a PLACEHOLDER ({len(real)} code lines)"
+                                    print(msg)
+                                    failed += 1
+                                    errors.append(msg)
+                        else:
+                            msg = f"  {RED}FAIL{RESET} [{event_name}] {part} -> MISSING at {resolved}"
+                            print(msg)
+                            failed += 1
+                            errors.append(msg)
+
+    # Cross-check: substantive .py files should be registered
+    excluded = {"__init__.py"}
+    for fname in sorted(os.listdir(hooks_dir)):
+        if not fname.endswith(".py") or fname.startswith("__") or fname in excluded:
+            continue
+        fpath = os.path.join(hooks_dir, fname)
+        with open(fpath, encoding="utf-8") as f:
+            content = f.read()
+        real = [l for l in content.splitlines() if l.strip() and not l.strip().startswith("#")]
+        if len(real) < 3:
+            continue  # placeholder, skip cross-check
+        if fname not in registered_scripts:
+            print(f"  {YELLOW}WARN{RESET} {fname} in hooks/ but NOT registered in settings.local.json")
+
+
 def main():
     global passed, failed, errors
     print("=" * 60)
@@ -556,6 +619,31 @@ def main():
     test_post_hook("spec_staleness_guard.py", "Read",
         {"file_path": "/some/file"}, None,
         "SILENT: Read tool (hook ignores non-Bash)")
+
+    # == plan_config_drift_guard.py ==
+    print("\n== plan_config_drift_guard.py ==")
+    test_hook("plan_config_drift_guard.py", "Bash",
+              {"command": "dotnet build"}, "allow",
+              "ALLOW: dotnet build (not a git commit)")
+    test_hook("plan_config_drift_guard.py", "Bash",
+              {"command": "git commit -m 'test'"}, "allow",
+              "ALLOW: git commit with no staged files")
+    test_hook("plan_config_drift_guard.py", "Read",
+              {"file_path": "/some/file"}, "allow",
+              "ALLOW: Read tool (non-Bash)")
+
+    # == fix_commit_smell_guard.py ==
+    print("\n== fix_commit_smell_guard.py ==")
+    test_hook("fix_commit_smell_guard.py", "Bash",
+              {"command": "dotnet build"}, "allow",
+              "ALLOW: dotnet build (not a git commit)")
+    test_hook("fix_commit_smell_guard.py", "Read",
+              {"file_path": "/some/file"}, "allow",
+              "ALLOW: Read tool (non-Bash)")
+
+    # == Hook registration: paths and placeholders ==
+    print("\n== Hook Registration ==")
+    test_hook_registration(REPO_ROOT, HOOKS_DIR)
 
     # == Summary ==
     print("\n" + "=" * 60)
